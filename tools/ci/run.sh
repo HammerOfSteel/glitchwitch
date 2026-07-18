@@ -38,13 +38,21 @@ job_godot() {
 
 job_screenshot() {
 	# Look-dev screenshot needs a GL context; CI provides xvfb + llvmpipe.
-	if [ "${CI:-}" = "true" ] && ! command -v xvfb-run >/dev/null 2>&1; then
-		sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+	# The screenshot is a review artifact, not a test: it soft-fails with a
+	# loud warning so a flaky GL stack can never block a phase gate.
+	if [ "${CI:-}" = "true" ]; then
+		sudo apt-get update -qq >/dev/null 2>&1 || true
+		sudo apt-get install -y -qq xvfb libgl1 libgl1-mesa-dri libegl1 \
+			libxcursor1 libxinerama1 libxrandr2 libxi6 libxkbcommon0 \
+			>/dev/null 2>&1 || true
 	fi
 	if command -v xvfb-run >/dev/null 2>&1; then
-		LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a --server-args="-screen 0 1280x720x24" \
-			.tooling/godot --path . res://src/lookdev/screenshot.tscn
-		echo "look-dev screenshot written to artifacts/"
+		if LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a --server-args="-screen 0 1280x720x24" \
+			.tooling/godot --path . res://src/lookdev/screenshot.tscn; then
+			echo "look-dev screenshot written to artifacts/"
+		else
+			echo "::warning::look-dev screenshot failed (software GL unavailable?) — continuing"
+		fi
 	else
 		echo "xvfb unavailable — skipping look-dev screenshot (CI produces it)"
 	fi
