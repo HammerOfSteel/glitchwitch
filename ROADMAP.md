@@ -110,14 +110,29 @@ Goal: a repo where every later phase is cheap — pipeline, tests, CI, and the l
 
 | Phase | Branch | State |
 |---|---|---|
-| 0 — Foundation | `phase/00-foundation` | ✅ built (PR merge + tag pending) |
-| 1 — Player & Camera | `phase/01-player-camera` | ✅ built (gate pending) |
-| 2–11 | — | 📋 planned |
+| 0 — Foundation | `phase/00-foundation` | ✅ complete |
+| 1 — Player & Camera | `phase/01-player-camera` | ✅ complete |
+| 2 — World & Time | `phase/02-world` | ⏭️ next up |
+| 3–11 | — | 📋 planned |
+
+At each gate: suites fully green, playable artifact, docs updated.
+Gate records — Phase 0: 36 pytest + 11 gdUnit. Phase 1: 44 pytest + 57 gdUnit,
+Linux export boots into the sandbox glade.
+
+## Housekeeping (small chores, none blocking)
+
+- [ ] **One-time CI activation:** add `.github/workflows/ci.yml` on the default branch
+  (copy from [`tools/ci/workflow.stub.yml`](tools/ci/workflow.stub.yml) — automation
+  tokens cannot write that path). Every push then runs style + pytest + gdUnit +
+  Linux/Web export builds + look-dev screenshots as downloadable artifacts.
+- [ ] **Tag `v0.2.0`** after the phase merges (covers phases 0–1; per-phase tags resume
+  at each future gate).
+- [ ] Owner: license decision — see [LICENSES.md](LICENSES.md).
+- [ ] Owner: story-bible name vetoes (village, cast, entities).
+- [ ] Owner: adapted album stems, any time — the manifest slot opens in Phase 7.
 
 ## Deferred / floating
 
 - **Music integration:** the album's adapted stems are produced by the project owner and
   drop into `content/music/manifest.json` any time after Phase 7 — the AudioDirector is
   built stem-ready with generated ambience beds as placeholders.
-- **License decision** (owner): see [LICENSES.md](LICENSES.md).
-- **Name vetoes** (owner): village, cast, and entity names proposed in the story bible.

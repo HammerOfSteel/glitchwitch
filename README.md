@@ -19,7 +19,10 @@ Maybe we're simulated, maybe we're storied — either way, **love is the runtime
 
 ## Status
 
-🚶‍♀️ **Phase 1 — Player & Camera** built (Wren walks!); Phase 0 merged-as-built. See [ROADMAP.md](ROADMAP.md).
+✅ **Phases 0–1 complete** — foundation, pipeline, CI, procedural art style, player
+controller, third/first-person camera, Witch Sight, interactions, and **Wren** herself
+(procedurally generated and animated). The build boots into a walkable sandbox glade.
+⏭️ Next: **Phase 2 — World & Time**. Full plan and status: [ROADMAP.md](ROADMAP.md).
 
 | | |
 |---|---|
@@ -27,7 +30,7 @@ Maybe we're simulated, maybe we're storied — either way, **love is the runtime
 | Renderer | GL Compatibility (toy-render look, web-friendly) |
 | Language | GDScript (strict typing) + Python 3.9+ for tooling |
 | Camera | Third person, with first-person **Witch Sight** toggle |
-| Assets | Code-first: procedural meshes, generated palettes, CC0 rigged characters restyled |
+| Assets | Code-first: procedural meshes & characters, generated palettes, code-authored animations |
 | Tests | gdUnit4 (game) + pytest (tools), green gate per phase |
 
 ## Quickstart
