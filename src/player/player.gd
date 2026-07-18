@@ -26,10 +26,19 @@ func _ready() -> void:
 	var rig := _camera_rig()
 	if rig != null:
 		rig.mode_changed.connect(_on_camera_mode_changed)
+	var resolver := _focus_resolver()
+	var prompt := get_node_or_null("%InteractPrompt") as InteractPrompt
+	if resolver != null and prompt != null:
+		resolver.focus_changed.connect(prompt.on_focus_changed)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
+		return
+	if event.is_action_pressed(&"interact"):
+		var resolver := _focus_resolver()
+		if resolver != null:
+			resolver.interact_focused(self)
 		return
 	var rig := _camera_rig()
 	if rig == null:
@@ -74,6 +83,10 @@ func _read_input() -> void:
 
 func _camera_rig() -> CameraRig:
 	return get_node_or_null("CameraRig") as CameraRig
+
+
+func _focus_resolver() -> FocusResolver:
+	return get_node_or_null("%FocusResolver") as FocusResolver
 
 
 func _camera_yaw() -> float:

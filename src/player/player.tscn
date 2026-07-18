@@ -1,7 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://src/player/player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://src/camera/camera_rig.tscn" id="2_rig"]
+[ext_resource type="Script" path="res://src/interact/focus_resolver.gd" id="3_resolver"]
+[ext_resource type="Script" path="res://src/interact/interact_prompt.gd" id="4_prompt"]
 
 [sub_resource type="CapsuleShape3D" id="capsule"]
 radius = 0.35
@@ -18,3 +20,28 @@ shape = SubResource("capsule")
 unique_name_in_owner = true
 
 [node name="CameraRig" parent="." instance=ExtResource("2_rig")]
+
+[node name="FocusResolver" type="Node3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("3_resolver")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="InteractPrompt" type="Label" parent="HUD"]
+unique_name_in_owner = true
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -240.0
+offset_top = -84.0
+offset_right = 240.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+vertical_alignment = 1
+script = ExtResource("4_prompt")
