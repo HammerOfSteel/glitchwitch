@@ -1,0 +1,25 @@
+# Godot
+.godot/
+*.translation
+export_credentials.cfg
+
+# Build & generated output (rebuilt via tools/assetgen)
+assets/generated/
+assets/thirdparty/
+build/
+exports/
+
+# Pinned tooling fetched by tools/bootstrap.py
+.tooling/
+addons/gdUnit4/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.tmp
