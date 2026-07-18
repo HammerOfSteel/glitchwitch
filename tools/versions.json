@@ -1,0 +1,12 @@
+{
+  "godot": {
+    "version": "4.7.1-stable",
+    "linux_zip": "https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip",
+    "linux_sha256": "c7ff14fd28472c8d4f193043de30278dcf7e5241a1dcf7566b02e27addaa33ba",
+    "templates": "https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz"
+  },
+  "gdunit4": {
+    "tag": "v6.1.3",
+    "zip": "https://codeload.github.com/godot-gdunit-labs/gdUnit4/zip/refs/tags/v6.1.3"
+  }
+}
