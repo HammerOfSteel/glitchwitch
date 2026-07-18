@@ -22,6 +22,24 @@ var _step_accumulator := 0.0
 @onready var _avatar_mount: Node3D = %AvatarMount
 
 
+func _ready() -> void:
+	var rig := _camera_rig()
+	if rig != null:
+		rig.mode_changed.connect(_on_camera_mode_changed)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not input_enabled:
+		return
+	var rig := _camera_rig()
+	if rig == null:
+		return
+	if event.is_action_pressed(&"camera_toggle"):
+		rig.toggle_mode()
+	elif event.is_action_pressed(&"witch_sight"):
+		rig.toggle_sight()
+
+
 func _physics_process(delta: float) -> void:
 	if input_enabled:
 		_read_input()
@@ -54,11 +72,20 @@ func _read_input() -> void:
 	set_move_intent(vec, Input.is_action_pressed(&"run"))
 
 
+func _camera_rig() -> CameraRig:
+	return get_node_or_null("CameraRig") as CameraRig
+
+
 func _camera_yaw() -> float:
-	var rig := get_node_or_null("CameraRig")
-	if rig != null and rig.has_method("yaw"):
+	var rig := _camera_rig()
+	if rig != null:
 		return rig.yaw()
 	return 0.0
+
+
+func _on_camera_mode_changed(mode: CameraRig.Mode) -> void:
+	if _avatar_mount != null:
+		_avatar_mount.visible = mode == CameraRig.Mode.THIRD
 
 
 func _face_motion(delta: float) -> void:
