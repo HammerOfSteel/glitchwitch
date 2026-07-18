@@ -6,6 +6,16 @@ extends Node3D
 ## exponential lag instead of being welded to it. Yaw lives on the rig,
 ## pitch on the PitchPivot, and a SpringArm3D keeps the camera out of walls.
 
+signal mode_changed(mode: Mode)
+signal sight_changed(enabled: bool)
+
+enum Mode { THIRD, FIRST }
+
+const SEAM_LAYER_BIT := 2  # render layer 2 (1 << 1): seam objects live here
+const FOV_THIRD := 50.0
+const FOV_FIRST := 70.0
+const FIRST_PIVOT_HEIGHT := 0.25
+const TRANSITION_TIME := 0.25
 const MOUSE_SENSITIVITY := 0.0035
 const STICK_SENSITIVITY := 2.6
 const STICK_DEADZONE := 0.15
@@ -27,10 +37,14 @@ var _pitch := -0.35
 var _zoom_target := 3.5
 var _last_look_time := -10.0
 var _bias_target: Node3D = null
+var _mode := Mode.THIRD
+var _sight := false
+var _transition_tween: Tween = null
 
 @onready var _pitch_pivot: Node3D = %PitchPivot
 @onready var _spring_arm: SpringArm3D = %SpringArm
 @onready var _camera: Camera3D = %Camera
+@onready var _sight_overlay: CanvasLayer = %SightOverlay
 
 
 func _ready() -> void:
@@ -56,7 +70,7 @@ func _process(delta: float) -> void:
 	_follow_anchor(delta)
 	_apply_frame_bias(delta)
 	_spring_arm.spring_length = lerpf(
-		_spring_arm.spring_length, _zoom_target, 1.0 - exp(-ZOOM_LERP * delta)
+		_spring_arm.spring_length, _arm_target(), 1.0 - exp(-ZOOM_LERP * delta)
 	)
 
 
@@ -89,6 +103,60 @@ func zoom_target() -> float:
 
 func set_bias_target(target: Node3D) -> void:
 	_bias_target = target
+
+
+func mode() -> Mode:
+	return _mode
+
+
+func sight_enabled() -> bool:
+	return _sight
+
+
+func toggle_mode(instant: bool = false) -> void:
+	set_mode(Mode.FIRST if _mode == Mode.THIRD else Mode.THIRD, instant)
+
+
+func set_mode(new_mode: Mode, instant: bool = false) -> void:
+	if new_mode == _mode:
+		return
+	_mode = new_mode
+	var target_fov := FOV_FIRST if _mode == Mode.FIRST else FOV_THIRD
+	var target_pivot_y := FIRST_PIVOT_HEIGHT if _mode == Mode.FIRST else 0.0
+	if _transition_tween != null and _transition_tween.is_valid():
+		_transition_tween.kill()
+	if instant:
+		_camera.fov = target_fov
+		_pitch_pivot.position.y = target_pivot_y
+		_spring_arm.spring_length = _arm_target()
+	else:
+		_transition_tween = create_tween().set_parallel(true)
+		_transition_tween.tween_property(_camera, "fov", target_fov, TRANSITION_TIME)
+		_transition_tween.tween_property(
+			_pitch_pivot, "position:y", target_pivot_y, TRANSITION_TIME
+		)
+	mode_changed.emit(_mode)
+
+
+func toggle_sight() -> void:
+	set_sight(not _sight)
+
+
+func set_sight(enabled: bool) -> void:
+	if enabled == _sight:
+		return
+	_sight = enabled
+	if enabled:
+		_camera.cull_mask |= SEAM_LAYER_BIT
+	else:
+		_camera.cull_mask &= ~SEAM_LAYER_BIT
+	if _sight_overlay != null:
+		_sight_overlay.visible = enabled
+	sight_changed.emit(enabled)
+
+
+func _arm_target() -> float:
+	return 0.0 if _mode == Mode.FIRST else _zoom_target
 
 
 func snap_to_anchor() -> void:

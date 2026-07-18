@@ -1,6 +1,10 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://src/camera/camera_rig.gd" id="1_rig"]
+[ext_resource type="Shader" path="res://src/shaders/witch_sight_overlay.gdshader" id="2_sight"]
+
+[sub_resource type="ShaderMaterial" id="sight_mat"]
+shader = ExtResource("2_sight")
 
 [node name="CameraRig" type="Node3D"]
 script = ExtResource("1_rig")
@@ -16,4 +20,18 @@ margin = 0.25
 [node name="Camera" type="Camera3D" parent="PitchPivot/SpringArm"]
 unique_name_in_owner = true
 fov = 50.0
+cull_mask = 1048573
 current = true
+
+[node name="SightOverlay" type="CanvasLayer" parent="."]
+unique_name_in_owner = true
+visible = false
+
+[node name="Tint" type="ColorRect" parent="SightOverlay"]
+material = SubResource("sight_mat")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
