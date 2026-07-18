@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://src/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://src/player/avatar.gd" id="5_avatar"]
 [ext_resource type="PackedScene" path="res://src/camera/camera_rig.tscn" id="2_rig"]
 [ext_resource type="Script" path="res://src/interact/focus_resolver.gd" id="3_resolver"]
 [ext_resource type="Script" path="res://src/interact/interact_prompt.gd" id="4_prompt"]
@@ -18,6 +19,10 @@ shape = SubResource("capsule")
 
 [node name="AvatarMount" type="Node3D" parent="."]
 unique_name_in_owner = true
+
+[node name="Avatar" type="Node3D" parent="AvatarMount"]
+unique_name_in_owner = true
+script = ExtResource("5_avatar")
 
 [node name="CameraRig" parent="." instance=ExtResource("2_rig")]
 

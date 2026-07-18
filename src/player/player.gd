@@ -30,6 +30,9 @@ func _ready() -> void:
 	var prompt := get_node_or_null("%InteractPrompt") as InteractPrompt
 	if resolver != null and prompt != null:
 		resolver.focus_changed.connect(prompt.on_focus_changed)
+	var avatar := get_node_or_null("%Avatar") as WrenAvatar
+	if avatar != null:
+		motion_changed.connect(avatar.set_motion_state)
 
 
 func _unhandled_input(event: InputEvent) -> void:
