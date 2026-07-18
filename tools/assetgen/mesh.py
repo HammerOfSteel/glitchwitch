@@ -95,12 +95,12 @@ def add_box(builder: MeshBuilder, center, size, ramp: str, shade: int,
         (cx - hx, cy + hy, cz - hz), (cx + hx, cy + hy, cz - hz),
         (cx + hx, cy + hy, cz + hz), (cx - hx, cy + hy, cz + hz),
     ]
-    builder.add_face([c[4], c[5], c[6], c[7]], *top)          # +Y
-    builder.add_face([c[3], c[2], c[1], c[0]], *bottom)       # -Y
-    builder.add_face([c[7], c[6], c[2], c[3]], ramp, shade)   # +Z
-    builder.add_face([c[5], c[4], c[0], c[1]], ramp, shade)   # -Z
-    builder.add_face([c[6], c[5], c[1], c[2]], ramp, shade)   # +X
-    builder.add_face([c[4], c[7], c[3], c[0]], ramp, shade)   # -X
+    builder.add_face([c[4], c[7], c[6], c[5]], *top)          # +Y
+    builder.add_face([c[0], c[1], c[2], c[3]], *bottom)       # -Y
+    builder.add_face([c[3], c[2], c[6], c[7]], ramp, shade)   # +Z
+    builder.add_face([c[1], c[0], c[4], c[5]], ramp, shade)   # -Z
+    builder.add_face([c[2], c[1], c[5], c[6]], ramp, shade)   # +X
+    builder.add_face([c[0], c[3], c[7], c[4]], ramp, shade)   # -X
 
 
 def add_lathe(builder: MeshBuilder, profile, segments: int, ramp: str, shade: int,
@@ -129,12 +129,14 @@ def add_lathe(builder: MeshBuilder, profile, segments: int, ramp: str, shade: in
             p01 = ring_point(r0, y0, nxt)
             p10 = ring_point(r1, y1, segment)
             p11 = ring_point(r1, y1, nxt)
+            # outward winding for ascending profiles: [p00, p10, p11, p01];
+            # degenerate radii collapse to triangles keeping orientation.
             if r0 < 1e-9:
-                builder.add_face([p00, p11, p10], ramp, face_shade)
+                builder.add_face([p00, p10, p11], ramp, face_shade)
             elif r1 < 1e-9:
-                builder.add_face([p00, p01, p10], ramp, face_shade)
+                builder.add_face([p00, p10, p01], ramp, face_shade)
             else:
-                builder.add_face([p00, p01, p11, p10], ramp, face_shade)
+                builder.add_face([p00, p10, p11, p01], ramp, face_shade)
     if cap_start and profile[0][0] > 1e-9:
         radius, y = profile[0]
         points = [ring_point(radius, y, s) for s in range(segments)]
