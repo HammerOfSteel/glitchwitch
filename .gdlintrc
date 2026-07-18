@@ -1,0 +1,4 @@
+# gdlint (gdtoolkit) configuration
+max-line-length: 100
+disable:
+  - max-public-methods
