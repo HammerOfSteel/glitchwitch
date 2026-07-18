@@ -19,7 +19,7 @@ Maybe we're simulated, maybe we're storied — either way, **love is the runtime
 
 ## Status
 
-🌱 **Phase 0 — Foundation** (of 12 planned phases). See [ROADMAP.md](ROADMAP.md).
+🚶‍♀️ **Phase 1 — Player & Camera** built (Wren walks!); Phase 0 merged-as-built. See [ROADMAP.md](ROADMAP.md).
 
 | | |
 |---|---|

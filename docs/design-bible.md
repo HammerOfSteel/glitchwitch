@@ -72,6 +72,10 @@ verb for a gentle shimmer + icon badge; it must ship alongside each verb, not la
   glimmers, and sigil traces via a cull-mask layer + shader pass. Available in both
   camera modes, richest in first person. This is the game's "observation mode" and the
   reason first person exists narratively.
+- **Shipped tuning (Phase 1):** walk 2.2 m/s · run 4.2 · accel 10 · decel 14 (stops kinder
+  than starts) · turn lerp 10 · gravity 18 · pitch clamp −71.6°..+45.8° · zoom 1.6–5.0 m ·
+  FOV 50° third / 70° first · camera follow lerp 12 · seam objects on **render layer 2**
+  (default cull mask excludes it; Witch Sight adds it back).
 - Input: keyboard+mouse and gamepad from day one; bindings defined **in code**
   (`src/core/input_bootstrap.gd`) because Phase 3 builds player rebinding on runtime
   `InputMap` anyway. Actions: move (4), run, interact, camera_toggle, witch_sight,
@@ -128,7 +132,9 @@ verb for a gentle shimmer + icon badge; it must ship alongside each verb, not la
   PNG writer. Deterministic under fixed seeds; byte-hash tested. Rationale: zero heavy
   dependencies in CI/sandbox, total reproducibility, fast iteration. (Blender remains an
   optional future tool for character accessory work; it is not a build dependency.)
-- Characters: CC0 rigged+animated bases (KayKit / Quaternius / Kenney), fetched at pinned
-  URLs by `tools/bootstrap.py`, restyled to the palette at import. One canonical rig.
+- Characters: **procedural segmented rigid-part rigs** with code-authored glTF node
+  animations (see Wren in `tools/assetgen/character.py`) — one art language, zero binaries,
+  clips loop via Godot's "-loop" import convention. CC0 skinned bases (KayKit / Quaternius)
+  remain a documented fallback via `tools/bootstrap.py` if a character ever needs skinning.
 - Nothing binary is committed. `assets/generated/` and `assets/thirdparty/` are build
   outputs, ignored by git, rebuilt by `make assets` / bootstrap.

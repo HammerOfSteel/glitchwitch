@@ -32,7 +32,7 @@ Goal: a repo where every later phase is cheap — pipeline, tests, CI, and the l
 - T1.2 Third-person camera (spring arm, collision, orbit, interact-framing)
 - T1.3 First-person toggle + **Witch Sight** overlay (seam-revealing layer)
 - T1.4 Interaction system (focus, prompts, priority)
-- T1.5 Witch avatar: CC0 rigged base restyled, animation tree
+- T1.5 Witch avatar: procedural segmented character with code-authored clips
 
 ## Phase 2 — World & Time (`phase/02-world`)
 - T2.1 Environment generators v1 (trees, rocks, flora, fences, cottage kit, paths)
@@ -110,8 +110,9 @@ Goal: a repo where every later phase is cheap — pipeline, tests, CI, and the l
 
 | Phase | Branch | State |
 |---|---|---|
-| 0 — Foundation | `phase/00-foundation` | 🔨 in progress |
-| 1–11 | — | 📋 planned |
+| 0 — Foundation | `phase/00-foundation` | ✅ built (PR merge + tag pending) |
+| 1 — Player & Camera | `phase/01-player-camera` | ✅ built (gate pending) |
+| 2–11 | — | 📋 planned |
 
 ## Deferred / floating
 
