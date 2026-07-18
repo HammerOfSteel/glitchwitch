@@ -6,6 +6,7 @@ extends Node3D
 ## Applies the palette toon material to every mesh (generated GLBs carry no
 ## materials by design) and stages the sun, fill, and camera.
 
+
 func _ready() -> void:
 	apply_palette(self)
 	_stage()

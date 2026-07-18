@@ -9,7 +9,7 @@ config_version=5
 config/name="Glitch Witch"
 config/description="A cozy low-poly RPG about debugging a small world with kindness — set at the very edge of the singularity."
 config/version="0.1.0-dev"
-run/main_scene="res://src/main/main.tscn"
+run/main_scene="res://src/sandbox/glade.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 

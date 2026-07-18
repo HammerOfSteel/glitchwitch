@@ -15,4 +15,5 @@ static func apply(root: Node) -> void:
 		return
 	for found in root.find_children("*", "MeshInstance3D", true, false):
 		var mesh_instance := found as MeshInstance3D
-		mesh_instance.material_override = material
+		if mesh_instance.material_override == null:
+			mesh_instance.material_override = material

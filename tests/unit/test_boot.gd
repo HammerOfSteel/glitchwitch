@@ -23,11 +23,11 @@ func test_project_identity() -> void:
 
 func test_main_scene_is_configured_and_exists() -> void:
 	var main_scene := str(ProjectSettings.get_setting("application/run/main_scene", ""))
-	assert_str(main_scene).is_equal("res://src/main/main.tscn")
+	assert_str(main_scene).is_equal("res://src/sandbox/glade.tscn")
 	assert_bool(ResourceLoader.exists(main_scene)).is_true()
 
 
-func test_main_scene_boots() -> void:
+func test_banner_scene_boots() -> void:
 	var runner := scene_runner("res://src/main/main.tscn")
 	assert_object(runner.scene()).is_not_null()
 	var banner: Label = runner.scene().get_node("%Banner")
