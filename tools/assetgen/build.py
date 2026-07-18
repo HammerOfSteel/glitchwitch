@@ -10,7 +10,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import gltf, palette, props
+from . import character, gltf, palette, props
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO_ROOT / "assets" / "generated"
@@ -18,7 +18,7 @@ OUT_DIR = REPO_ROOT / "assets" / "generated"
 
 def build_all() -> dict:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    manifest = {"palette": {}, "props": {}}
+    manifest = {"palette": {}, "props": {}, "characters": {}}
 
     png = palette.build_palette_png()
     (OUT_DIR / "palette_main.png").write_bytes(png)
@@ -39,6 +39,15 @@ def build_all() -> dict:
             "sha256": hashlib.sha256(glb).hexdigest(),
         }
 
+    wren_glb = gltf.build_scene_glb(character.build_rig(), character.build_animations(), "wren")
+    (OUT_DIR / "wren.glb").write_bytes(wren_glb)
+    manifest["characters"]["wren"] = {
+        "tris": character.flattened_builder().tri_count,
+        "bytes": len(wren_glb),
+        "sha256": hashlib.sha256(wren_glb).hexdigest(),
+        "clips": [clip.name for clip in character.build_animations()],
+    }
+
     manifest_bytes = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
     (OUT_DIR / "manifest.json").write_bytes(manifest_bytes + b"\n")
     return manifest
@@ -49,6 +58,11 @@ def main() -> int:
     print(f"assets/generated/ <- palette_main.png ({manifest['palette']['palette_main.png']['bytes']} B)")
     for name, info in manifest["props"].items():
         print(f"assets/generated/ <- {name}.glb  ({info['tris']} tris, {info['bytes']} B)")
+    for name, info in manifest["characters"].items():
+        print(
+            f"assets/generated/ <- {name}.glb  ({info['tris']} tris, "
+            f"{len(info['clips'])} clips, {info['bytes']} B)"
+        )
     print("asset build OK")
     return 0
 
