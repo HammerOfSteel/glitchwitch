@@ -43,6 +43,50 @@ def test_lathe_rejects_short_profiles():
         mesh.add_lathe(builder, [(1.0, 0.0)], 8, "wood", 1)
 
 
+def _signed_volume(builder: mesh.MeshBuilder) -> float:
+    """Divergence-theorem volume: positive iff faces wind outward."""
+    total = 0.0
+    for t in range(builder.tri_count):
+        i0, i1, i2 = builder.indices[3 * t:3 * t + 3]
+        p0 = builder.positions[i0]
+        p1 = builder.positions[i1]
+        p2 = builder.positions[i2]
+        cx = p1[1] * p2[2] - p1[2] * p2[1]
+        cy = p1[2] * p2[0] - p1[0] * p2[2]
+        cz = p1[0] * p2[1] - p1[1] * p2[0]
+        total += (p0[0] * cx + p0[1] * cy + p0[2] * cz) / 6.0
+    return total
+
+
+def test_box_winds_outward():
+    builder = mesh.MeshBuilder()
+    mesh.add_box(builder, (0, 0, 0), (1, 2, 3), "wood", 1)
+    volume = _signed_volume(builder)
+    assert abs(volume - 6.0) < 0.01, volume  # 1*2*3, positive
+
+
+def test_cylinder_winds_outward():
+    builder = mesh.MeshBuilder()
+    mesh.add_cylinder(builder, (0, 0, 0), 1.0, 2.0, 24, "stone", 1)
+    volume = _signed_volume(builder)
+    expected = math.pi * 2.0  # approximated by 24 segments, slightly less
+    assert volume > expected * 0.9, volume
+
+
+def test_cone_winds_outward():
+    builder = mesh.MeshBuilder()
+    mesh.add_cone(builder, (0, 0, 0), 1.0, 3.0, 24, "pine", 1)
+    volume = _signed_volume(builder)
+    expected = math.pi / 3.0 * 3.0
+    assert volume > expected * 0.85, volume
+
+
+@pytest.mark.parametrize("name", ["crate", "ground_tile", "pine", "jar"])
+def test_closed_props_have_positive_volume(name):
+    volume = _signed_volume(props.build_prop(name, seed=0))
+    assert volume > 0.0, f"{name}: negative signed volume {volume} (inward faces)"
+
+
 # --- glb exporter -----------------------------------------------------------
 
 def test_glb_roundtrip_structure():
