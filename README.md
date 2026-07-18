@@ -1,5 +1,7 @@
 # Glitch Witch
 
+[![ci](https://github.com/HammerOfSteel/glitchwitch/actions/workflows/ci.yml/badge.svg)](https://github.com/HammerOfSteel/glitchwitch/actions/workflows/ci.yml)
+
 A cozy low-poly 3D RPG about debugging a small world with kindness — set in 202X, at the very edge of the singularity.
 
 > Salt and star, thread and flame,
@@ -65,6 +67,17 @@ docs/           design-bible.md · story-bible.md
 tests/          unit/ (gdUnit4) · python/ (pytest)
 tools/          assetgen/ (procedural asset pipeline) · bootstrap.py (pinned fetches)
 ```
+
+## CI (one-time setup)
+
+CI runs on GitHub Actions. Because automation tokens cannot write inside
+`.github/workflows/`, the workflow file is added **once, manually**: copy
+[`tools/ci/workflow.stub.yml`](tools/ci/workflow.stub.yml) to
+`.github/workflows/ci.yml` and commit. The stub is static by design — all CI
+logic lives in [`tools/ci/run.sh`](tools/ci/run.sh), which evolves with the
+project without ever touching the workflow file again. Jobs: `tools`
+(pytest + GDScript style), `godot` (headless gdUnit4 suite), `export`
+(Linux + Web smoke builds, uploaded as artifacts).
 
 ## Contributing & workflow
 
