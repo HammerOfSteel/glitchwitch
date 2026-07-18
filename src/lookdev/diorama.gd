@@ -6,22 +6,13 @@ extends Node3D
 ## Applies the palette toon material to every mesh (generated GLBs carry no
 ## materials by design) and stages the sun, fill, and camera.
 
-const PALETTE_MATERIAL_PATH := "res://src/materials/palette_main.tres"
-
-
 func _ready() -> void:
 	apply_palette(self)
 	_stage()
 
 
 static func apply_palette(root: Node) -> void:
-	var material := load(PALETTE_MATERIAL_PATH) as Material
-	if material == null:
-		push_warning("palette material unavailable — run `make assets` first")
-		return
-	for found in root.find_children("*", "MeshInstance3D", true, false):
-		var mesh_instance := found as MeshInstance3D
-		mesh_instance.material_override = material
+	PaletteApply.apply(root)
 
 
 func _stage() -> void:
