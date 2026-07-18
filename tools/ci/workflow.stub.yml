@@ -1,0 +1,66 @@
+# ============================================================================
+# STATIC WORKFLOW STUB — copy this file to .github/workflows/ci.yml
+#
+# One-time manual step: the repo automation's GitHub token cannot write inside
+# .github/workflows/ (missing `workflow` scope), so a human adds this file once.
+# It is designed to NEVER need editing again: every job delegates to
+# tools/ci/run.sh, which automation CAN maintain as the project grows.
+# ============================================================================
+name: ci
+
+on:
+  push:
+    branches: [main, "phase/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tools:
+    name: python tools & gdscript style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: bash tools/ci/run.sh tools
+
+  godot:
+    name: godot tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .tooling
+            addons/gdUnit4
+          key: godot-tooling-${{ hashFiles('tools/versions.json') }}
+      - run: bash tools/ci/run.sh godot
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: godot-ci-${{ github.run_number }}
+          path: |
+            reports/
+            artifacts/
+          if-no-files-found: ignore
+
+  export:
+    name: export smoke (linux + web)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .tooling
+            addons/gdUnit4
+            ~/.local/share/godot/export_templates
+          key: godot-export-${{ hashFiles('tools/versions.json') }}
+      - run: bash tools/ci/run.sh export
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dev-build-${{ github.run_number }}
+          path: build/
+          if-no-files-found: error
