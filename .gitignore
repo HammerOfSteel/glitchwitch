@@ -26,3 +26,6 @@ Thumbs.db
 
 # gdUnit4 reports
 reports/
+
+# look-dev / CI screenshot output
+artifacts/

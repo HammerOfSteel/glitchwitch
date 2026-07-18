@@ -39,7 +39,8 @@ ALLOWED_FILENAMES = {
 }
 
 IGNORED_DIRS = {".git", ".godot", ".tooling", ".pytest_cache", "__pycache__",
-                "assets", "addons", "build", "exports", "reports", ".venv"}
+                "assets", "addons", "build", "exports", "reports", "artifacts",
+                ".venv"}
 
 
 def tracked_files():

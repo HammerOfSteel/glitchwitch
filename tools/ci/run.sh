@@ -33,6 +33,21 @@ job_godot() {
 	.tooling/godot --headless --path . --import
 	.tooling/godot --headless --path . \
 		-s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit --ignoreHeadlessMode
+	job_screenshot
+}
+
+job_screenshot() {
+	# Look-dev screenshot needs a GL context; CI provides xvfb + llvmpipe.
+	if [ "${CI:-}" = "true" ] && ! command -v xvfb-run >/dev/null 2>&1; then
+		sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+	fi
+	if command -v xvfb-run >/dev/null 2>&1; then
+		LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a --server-args="-screen 0 1280x720x24" \
+			.tooling/godot --path . res://src/lookdev/screenshot.tscn
+		echo "look-dev screenshot written to artifacts/"
+	else
+		echo "xvfb unavailable — skipping look-dev screenshot (CI produces it)"
+	fi
 }
 
 job_export() {
