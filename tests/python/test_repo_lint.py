@@ -30,12 +30,16 @@ REQUIRED_FILES = {
 # the no-binaries policy (docs/design-bible.md, "Asset pipeline").
 ALLOWED_EXTENSIONS = {
     ".md", ".py", ".gd", ".tscn", ".tres", ".godot", ".json", ".yml", ".yaml",
-    ".cfg", ".toml", ".svg", ".gdshader", ".sh", ".editorconfig",
+    ".cfg", ".toml", ".svg", ".gdshader", ".sh", ".editorconfig", ".uid",
     ".gitignore", ".gitattributes", ".gdignore", ".import", ".txt", ".gitkeep",
 }
 
+ALLOWED_FILENAMES = {
+    ".godot-version", ".gdlintrc", "Makefile", "export_presets.cfg",
+}
+
 IGNORED_DIRS = {".git", ".godot", ".tooling", ".pytest_cache", "__pycache__",
-                "assets", "addons", "build", "exports", ".venv"}
+                "assets", "addons", "build", "exports", "reports", ".venv"}
 
 
 def tracked_files():
@@ -65,7 +69,9 @@ def test_no_binary_files_tracked():
     offenders = []
     for rel, path in tracked_files():
         suffix = path.suffix.lower() or path.name
-        if suffix not in ALLOWED_EXTENSIONS and path.name not in ALLOWED_EXTENSIONS:
+        if (suffix not in ALLOWED_EXTENSIONS
+                and path.name not in ALLOWED_EXTENSIONS
+                and path.name not in ALLOWED_FILENAMES):
             offenders.append(str(rel))
             continue
         try:
