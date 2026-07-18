@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://src/player/player.gd" id="1_player"]
+[ext_resource type="PackedScene" path="res://src/camera/camera_rig.tscn" id="2_rig"]
 
 [sub_resource type="CapsuleShape3D" id="capsule"]
 radius = 0.35
@@ -15,3 +16,5 @@ shape = SubResource("capsule")
 
 [node name="AvatarMount" type="Node3D" parent="."]
 unique_name_in_owner = true
+
+[node name="CameraRig" parent="." instance=ExtResource("2_rig")]
