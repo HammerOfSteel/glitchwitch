@@ -19,7 +19,6 @@ def witch_skirt() -> MeshBuilder:
     return builder
 
 
-
 def witch_torso() -> MeshBuilder:
     builder = MeshBuilder()
     profile = [(0.125, -0.08), (0.15, 0.02), (0.13, 0.10), (0.10, 0.18)]
@@ -27,13 +26,11 @@ def witch_torso() -> MeshBuilder:
     return builder
 
 
-
 def witch_arm() -> MeshBuilder:
     builder = MeshBuilder()
     add_box(builder, (0.0, -0.12, 0.0), (0.075, 0.24, 0.075), "rust", 1)
     add_box(builder, (0.0, -0.27, 0.0), (0.06, 0.06, 0.06), "cream", 3)
     return builder
-
 
 
 def witch_head() -> MeshBuilder:
@@ -48,7 +45,6 @@ def witch_head() -> MeshBuilder:
     return builder
 
 
-
 def witch_hat() -> MeshBuilder:
     builder = MeshBuilder()
     add_cylinder(builder, (0.0, 0.0, 0.0), 0.20, 0.03, 10, "void_plum", 1, shade_top=2)
@@ -60,14 +56,12 @@ def witch_hat() -> MeshBuilder:
     return builder
 
 
-
 def witch_braid() -> MeshBuilder:
     builder = MeshBuilder()
     add_box(builder, (0.0, -0.02, 0.02), (0.06, 0.08, 0.06), "honey", 2)
     add_box(builder, (0.0, -0.10, 0.045), (0.05, 0.08, 0.05), "honey", 1)
     add_box(builder, (0.0, -0.17, 0.06), (0.035, 0.07, 0.035), "honey", 2)
     return builder
-
 
 
 def witch_boot() -> MeshBuilder:
@@ -92,11 +86,9 @@ _REGISTRY = {
 }
 
 
-
 def candidates_for(archetype: str, slot: str) -> list:
     """Sorted list of part ids available for archetype+slot (empty if none)."""
     return sorted(_REGISTRY.get(archetype, {}).get(slot, {}).keys())
-
 
 
 def build_part(archetype: str, slot: str, part_id: str) -> MeshBuilder:
@@ -109,7 +101,14 @@ def build_part(archetype: str, slot: str, part_id: str) -> MeshBuilder:
     return builder_fn()
 
 
-
 def register(archetype: str, slot: str, part_id: str, builder_fn) -> None:
-    """Register a new part builder (used by future archetypes)."""
-    _REGISTRY.setdefault(archetype, {}).setdefault(slot, {})[part_id] = builder_fn
+    """Register a new part builder (used by future archetypes).
+
+    Raises ValueError if the (archetype, slot, part_id) combination is already registered.
+    """
+    slot_dict = _REGISTRY.setdefault(archetype, {}).setdefault(slot, {})
+    if part_id in slot_dict:
+        raise ValueError(
+            f"part '{part_id}' is already registered for archetype '{archetype}' slot '{slot}'"
+        )
+    slot_dict[part_id] = builder_fn
