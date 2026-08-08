@@ -10,10 +10,26 @@ import json
 import sys
 from pathlib import Path
 
-from . import character, gltf, palette, props
+from . import (
+    animation_contract,
+    character,
+    character_gen,
+    character_validate,
+    gltf,
+    palette,
+    props,
+    rig_contract,
+)
+from .character_spec import SPEC_SCHEMA_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO_ROOT / "assets" / "generated"
+
+
+def _walk_nodes(node):
+    yield node
+    for child in node.children:
+        yield from _walk_nodes(child)
 
 
 def build_all() -> dict:
@@ -39,13 +55,22 @@ def build_all() -> dict:
             "sha256": hashlib.sha256(glb).hexdigest(),
         }
 
-    wren_glb = gltf.build_scene_glb(character.build_rig(), character.build_animations(), "wren")
+    wren_rig, wren_clips = character_gen.generate(character.WREN_SPEC)
+    character_validate.validate(wren_rig, wren_clips, tri_budget=character.TRI_BUDGET)
+    wren_glb = gltf.build_scene_glb(wren_rig, wren_clips, "wren")
     (OUT_DIR / "wren.glb").write_bytes(wren_glb)
+    resolved_parts = character_gen.resolved_parts_for(character.WREN_SPEC)
     manifest["characters"]["wren"] = {
-        "tris": character.flattened_builder().tri_count,
+        "archetype": character.WREN_SPEC.archetype,
+        "seed": character.WREN_SPEC.seed,
+        "resolved_parts": resolved_parts,
+        "spec_schema_version": SPEC_SCHEMA_VERSION,
+        "rig_contract_version": rig_contract.VERSION,
+        "animation_contract_version": animation_contract.VERSION,
+        "tris": sum(node.mesh.tri_count for node in _walk_nodes(wren_rig) if node.mesh),
         "bytes": len(wren_glb),
         "sha256": hashlib.sha256(wren_glb).hexdigest(),
-        "clips": [clip.name for clip in character.build_animations()],
+        "clips": [clip.name for clip in wren_clips],
     }
 
     manifest_bytes = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
