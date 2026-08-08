@@ -70,6 +70,37 @@ def witch_boot() -> MeshBuilder:
     return builder
 
 
+# --- villager archetype: simple proof-of-pipeline parts ---------------------
+
+def empty_placeholder() -> MeshBuilder:
+    """Zero-geometry mesh for a structurally-mandatory-but-visually-absent slot."""
+    return MeshBuilder()
+
+
+def villager_torso() -> MeshBuilder:
+    builder = MeshBuilder()
+    add_box(builder, (0.0, 0.05, 0.0), (0.28, 0.32, 0.22), "moss", 2)
+    return builder
+
+
+def villager_head() -> MeshBuilder:
+    builder = MeshBuilder()
+    add_box(builder, (0.0, 0.0, 0.0), (0.24, 0.24, 0.22), "cream", 3)
+    return builder
+
+
+def villager_arm() -> MeshBuilder:
+    builder = MeshBuilder()
+    add_box(builder, (0.0, -0.12, 0.0), (0.07, 0.22, 0.07), "moss", 1)
+    return builder
+
+
+def villager_boot() -> MeshBuilder:
+    builder = MeshBuilder()
+    add_box(builder, (0.0, 0.0, -0.01), (0.09, 0.10, 0.14), "bark", 1)
+    return builder
+
+
 # --- registry ------------------------------------------------------------
 
 # archetype -> slot -> {part_id: builder_fn}
@@ -82,6 +113,15 @@ _REGISTRY = {
         "headwear": {"witch_hat": witch_hat},
         "hair": {"witch_braid": witch_braid},
         "boot": {"witch_boot": witch_boot},
+    },
+    "villager": {
+        "hips": {"villager_hips_placeholder": empty_placeholder},
+        "torso": {"villager_torso": villager_torso},
+        "arm": {"villager_arm": villager_arm},
+        "head": {"villager_head": villager_head},
+        "headwear": {"villager_no_hat": empty_placeholder},
+        "hair": {"villager_no_hair": empty_placeholder},
+        "boot": {"villager_boot": villager_boot},
     },
 }
 
