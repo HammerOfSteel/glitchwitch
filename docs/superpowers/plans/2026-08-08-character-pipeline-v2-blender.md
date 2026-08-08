@@ -1063,7 +1063,7 @@ factors / shape-key values" — shape-key-driven proportion variation (e.g.
 smooth silhouette blends rather than rigid per-bone scaling) is intentionally
 deferred; ArchetypeSpec only carries bone_scales for now (see
 archetype_spec.py, Task 4). If bone scaling alone doesn't produce visually
-acceptable per-archetype variation during Wren/villager migration (Chunk 4),
+acceptable per-archetype variation during Wren/villager migration (Chunk 5),
 add shape-key support to ArchetypeSpec and this module then, rather than
 building it speculatively now.
 """
@@ -1551,3 +1551,1228 @@ Expected: PASS (2 tests), or SKIPPED if no Blender available locally.
 git add tools/assetgen/blender/materials.py tests/python/test_blender_materials.py
 git commit -m "Add blender/materials.py: palette-cell UV/material assignment"
 ```
+
+---
+
+## Chunk 3: animate/export/validate units
+
+This chunk finishes the archetype-variation architecture-table units directly
+operating on a live Blender scene or an exported `.glb` (`animate.py`, `export.py`,
+`validate.py`). The `build_character.py` orchestrator that calls every unit in
+order, and wiring a generic Blender-character build path into `build.py`, are
+Chunk 4 (split out separately to keep this chunk's line count manageable). This
+chunk's three units are each independently testable in isolation; Chunk 4 is what
+proves them working together end-to-end.
+
+**A note on `animate.py`'s clip names (critical, re-stated from the spec):**
+`src/player/avatar.gd`'s `GESTURE_CLIPS` requires `stir` as a bare (non-looping)
+one-shot name. v1's `tools/assetgen/animation_contract.py` actually names its stir
+clip `"stir-loop"` internally (a latent bug in v1, never caught because
+`character_validate.MANDATORY_CLIP_NAMES` never checked stir's name) — **this plan's
+`animate.py` does not copy that bug.** It uses `stir` (bare) and `wave` (bare) for
+the two one-shot gestures, and `idle-loop`/`walk-loop`/`run-loop` for the three
+looping motion clips, matching `avatar.gd`'s doc-comment and `GESTURE_CLIPS`/
+`MOTION_CLIPS` dicts exactly.
+
+### Task 9: `blender/animate.py`
+
+**Files:**
+- Create: `tools/assetgen/blender/animate.py`
+- Test: `tests/python/test_blender_animate.py`
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_blender_animate.py
+from tests.python.blender_test_helpers import requires_blender, run_in_blender
+
+
+@requires_blender
+def test_bake_clips_produces_expected_action_names():
+    driver = '''
+import sys, json
+sys.path.insert(0, ".")
+import bpy
+from tools.assetgen.blender import loader, animate
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+loader.load_base()
+spec = ArchetypeSpec(
+    name="villager", bone_scales={}, clothing=[], palette={},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+info = animate.bake(spec)
+action_names = sorted(a.name for a in bpy.data.actions)
+print("RESULT:" + json.dumps({**info, "action_names": action_names}))
+'''
+    result = run_in_blender(driver)
+    assert result["baked"] == [
+        "idle-loop", "walk-loop", "run-loop", "wave", "stir",
+    ]
+    assert result["action_names"] == [
+        "idle-loop", "run-loop", "stir", "walk-loop", "wave",
+    ]
+
+
+@requires_blender
+def test_bake_clips_raises_on_unbuildable_clip():
+    driver = '''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import loader, animate
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+loader.load_base()
+spec = ArchetypeSpec(
+    name="villager", bone_scales={}, clothing=[], palette={},
+    clips=["idle", "walk", "run", "wave", "stir", "not_a_real_clip"],
+)
+try:
+    animate.bake(spec)
+    print("RESULT:" + json.dumps({"raised": False}))
+except animate.UnknownClipError as exc:
+    print("RESULT:" + json.dumps({"raised": True, "message": str(exc)}))
+'''
+    result = run_in_blender(driver)
+    assert result["raised"] is True
+    assert "not_a_real_clip" in result["message"]
+```
+
+Note: `ArchetypeSpec.__post_init__` (Task 4) only checks that the five *mandatory*
+clips are present in `spec.clips` — it doesn't reject extras, so `clips=[...,
+"not_a_real_clip"]` passes spec construction and reaches `animate.bake()`, which is
+where an unbuildable clip name must be caught.
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_blender_animate.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named
+'tools.assetgen.blender.animate'` (or SKIPPED without Blender)
+
+- [ ] **Step 3: Write the implementation**
+
+```python
+# tools/assetgen/blender/animate.py
+"""Bakes the five mandatory clips (idle, walk, run, wave, stir) as Blender
+Actions on the loaded base armature, named to satisfy avatar.gd's exact
+contract: idle-loop/walk-loop/run-loop (looping motion clips) and wave/stir
+(bare, one-shot gestures) — see this chunk's header note on why `stir` is
+deliberately NOT "stir-loop" (a v1 animation_contract.py bug this module does
+not repeat).
+
+Poses are simple, new-rig-appropriate keyframe animations (not a literal port
+of v1's animation_contract.py, which references bones — hat, braid — that
+don't exist on this base armature; hat/braid-equivalent accessory animation,
+if any archetype needs it, is layered on top later as archetype-specific
+clothing-bone animation, out of scope for this baseline bake). All angles are
+in degrees, converted to radians for Blender's rotation_euler.
+"""
+from __future__ import annotations
+
+import math
+
+import bpy
+
+from .archetype_spec import ArchetypeSpec
+
+FPS = 24
+
+
+class UnknownClipError(RuntimeError):
+    pass
+
+
+def _new_action(name: str) -> bpy.types.Action:
+    action = bpy.data.actions.new(name)
+    return action
+
+
+def _keyframe(pose_bone, frame: int, euler_deg: tuple[float, float, float]) -> None:
+    pose_bone.rotation_mode = "XYZ"
+    pose_bone.rotation_euler = tuple(math.radians(d) for d in euler_deg)
+    pose_bone.keyframe_insert(data_path="rotation_euler", frame=frame)
+
+
+def _bake_idle(armature_obj) -> bpy.types.Action:
+    action = _new_action("idle-loop")
+    armature_obj.animation_data.action = action
+    duration_frames = int(2.4 * FPS)
+    torso = armature_obj.pose.bones["Spine"]
+    arm_l = armature_obj.pose.bones["Arm.L"]
+    arm_r = armature_obj.pose.bones["Arm.R"]
+    for frame in range(duration_frames + 1):
+        t = frame / FPS
+        breathe = 1.8 * math.sin(2 * math.pi * t / 2.4)
+        _keyframe(torso, frame, (breathe, 0.0, 0.0))
+        _keyframe(arm_l, frame, (2.0 * math.sin(2 * math.pi * t / 2.4), 0.0, 0.0))
+        _keyframe(arm_r, frame, (-2.0 * math.sin(2 * math.pi * t / 2.4), 0.0, 0.0))
+    return action
+
+
+def _bake_gait(armature_obj, name: str, duration: float, swing_deg: float) -> bpy.types.Action:
+    action = _new_action(name)
+    armature_obj.animation_data.action = action
+    duration_frames = int(duration * FPS)
+    leg_l = armature_obj.pose.bones["UpLeg.L"]
+    leg_r = armature_obj.pose.bones["UpLeg.R"]
+    arm_l = armature_obj.pose.bones["Arm.L"]
+    arm_r = armature_obj.pose.bones["Arm.R"]
+    for frame in range(duration_frames + 1):
+        t = frame / FPS
+        phase = math.sin(2 * math.pi * t / duration)
+        _keyframe(leg_l, frame, (swing_deg * phase, 0.0, 0.0))
+        _keyframe(leg_r, frame, (-swing_deg * phase, 0.0, 0.0))
+        _keyframe(arm_l, frame, (-swing_deg * phase, 0.0, 0.0))
+        _keyframe(arm_r, frame, (swing_deg * phase, 0.0, 0.0))
+    return action
+
+
+def _bake_wave(armature_obj) -> bpy.types.Action:
+    action = _new_action("wave")
+    armature_obj.animation_data.action = action
+    arm_r = armature_obj.pose.bones["Arm.R"]
+    # One-shot: raise, wiggle twice, lower. Frames at 24fps for a ~1.2s gesture.
+    keyframes = [
+        (0, (0.0, 0.0, 0.0)),
+        (6, (0.0, 0.0, 150.0)),
+        (12, (0.0, 0.0, 130.0)),
+        (16, (0.0, 0.0, 150.0)),
+        (22, (0.0, 0.0, 130.0)),
+        (29, (0.0, 0.0, 0.0)),
+    ]
+    for frame, euler_deg in keyframes:
+        _keyframe(arm_r, frame, euler_deg)
+    return action
+
+
+def _bake_stir(armature_obj) -> bpy.types.Action:
+    action = _new_action("stir")
+    armature_obj.animation_data.action = action
+    duration_frames = int(1.6 * FPS)
+    fore_arm_r = armature_obj.pose.bones["ForeArm.R"]
+    for frame in range(duration_frames + 1):
+        t = frame / FPS
+        pitch = 30.0 + 18.0 * math.sin(2 * math.pi * t / 1.6)
+        _keyframe(fore_arm_r, frame, (pitch, 0.0, 0.0))
+    return action
+
+
+_CLIP_BUILDERS = {
+    "idle": _bake_idle,
+    "walk": lambda armature_obj: _bake_gait(armature_obj, "walk-loop", 0.8, 14.0),
+    "run": lambda armature_obj: _bake_gait(armature_obj, "run-loop", 0.5, 25.0),
+    "wave": _bake_wave,
+    "stir": _bake_stir,
+}
+
+
+def bake(spec: ArchetypeSpec) -> dict:
+    """Bake every clip named in spec.clips as a Blender Action on the loaded
+    armature. Returns {"baked": [action_name, ...]} in the exact Godot-facing
+    names (idle-loop, walk-loop, run-loop, wave, stir), in spec.clips order.
+
+    Raises UnknownClipError naming the clip if spec.clips references something
+    not in _CLIP_BUILDERS (ArchetypeSpec itself only checks the 5 mandatory
+    clips are present, not that every listed clip is buildable — mirrors
+    clothing.py's UnknownClothingPieceError pattern for the same reason).
+    """
+    armature_obj = bpy.data.objects["Armature"]
+    if armature_obj.animation_data is None:
+        armature_obj.animation_data_create()
+    baked = []
+    for clip in spec.clips:
+        if clip not in _CLIP_BUILDERS:
+            raise UnknownClipError(
+                f"no animate.py builder registered for clip {clip!r}; "
+                f"known clips: {sorted(_CLIP_BUILDERS)}"
+            )
+        action = _CLIP_BUILDERS[clip](armature_obj)
+        baked.append(action.name)
+    return {"baked": baked}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_blender_animate.py -v`
+Expected: PASS (2 tests), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/assetgen/blender/animate.py tests/python/test_blender_animate.py
+git commit -m "Add blender/animate.py: bake idle/walk/run/wave/stir as Blender Actions"
+```
+
+---
+
+### Task 10: `blender/export.py`
+
+**Files:**
+- Modify: `tests/python/blender_test_helpers.py` (add a repo-local scratch-output
+  helper, needed by this task and Tasks 12-13)
+- Create: `tools/assetgen/blender/export.py`
+- Test: `tests/python/test_blender_export.py`
+
+- [ ] **Step 0: Add a repo-local scratch-output helper**
+
+The tests in this task and Tasks 12-13 need a real output file path (an exported
+`.glb`), not just a driver-script path. Pytest's `tmp_path` fixture resolves outside
+the repo/worktree, which the headless `blender` subprocess this harness runs cannot
+reliably write to (the same reason Chunk 1's render check and this file's own
+`SCRATCH_DIR` avoid the system temp dir) — so add a sibling helper that stays
+repo-local instead of reusing `tmp_path` for these cases:
+
+```python
+# tests/python/blender_test_helpers.py (add below SCRATCH_DIR)
+SCRATCH_OUTPUT_DIR = REPO_ROOT / "artifacts" / "blender_test_outputs"
+
+
+def scratch_output_path(suffix: str) -> Path:
+    """Return a fresh repo-local scratch file path for a test that needs to write
+    a real output file (e.g. an exported .glb), not a driver script. Uses the same
+    repo-local-not-system-temp convention as SCRATCH_DIR/run_in_blender, for the
+    same reason (the headless `blender` subprocess must be able to write here).
+    Caller is responsible for removing the file when the test finishes.
+    """
+    SCRATCH_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    return SCRATCH_OUTPUT_DIR / f"output_{uuid.uuid4().hex}{suffix}"
+```
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_blender_export.py
+from tests.python.blender_test_helpers import (
+    requires_blender,
+    run_in_blender,
+    scratch_output_path,
+)
+
+
+@requires_blender
+def test_export_writes_glb_and_reimports_cleanly():
+    out_path = scratch_output_path(".glb")
+    driver = f'''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import loader, animate, export
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+loader.load_base()
+spec = ArchetypeSpec(
+    name="villager", bone_scales={{}}, clothing=[], palette={{}},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+animate.bake(spec)
+info = export.export(spec, r"{out_path}")
+print("RESULT:" + json.dumps(info))
+'''
+    try:
+        result = run_in_blender(driver)
+        assert result["path"] == str(out_path)
+        assert out_path.exists()
+        assert out_path.stat().st_size > 0
+        assert result["reimport_ok"] is True
+    finally:
+        out_path.unlink(missing_ok=True)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_blender_export.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named
+'tools.assetgen.blender.export'` (or SKIPPED without Blender)
+
+- [ ] **Step 3: Write the implementation**
+
+```python
+# tools/assetgen/blender/export.py
+"""Exports the fully assembled scene (base body + clothing + materials +
+baked Actions) as a glTF binary (.glb), using a fixed, pinned option set, then
+re-imports it into a throwaway scene to confirm it parses cleanly before
+returning success — see spec's export.py responsibility row.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+import bpy
+
+from .archetype_spec import ArchetypeSpec
+
+# Pinned glTF export options (documented here, not scattered across call
+# sites): GLB binary, Y-up (Blender's exporter handles the Z-up -> Y-up
+# conversion automatically to match glTF/Godot convention), export every
+# baked Action as its own separate animation clip (not merged into one NLA
+# track — required so Godot's AnimationPlayer gets 5 distinct clips), and
+# apply modifiers (Bevel/Subsurf/Mirror) so the exported mesh is the smoothed
+# result, not the low-poly control cage.
+EXPORT_KWARGS = dict(
+    export_format="GLB",
+    export_yup=True,
+    export_animation_mode="ACTIONS",
+    export_apply=True,
+    export_animations=True,
+)
+
+
+def export(spec: ArchetypeSpec, output_path: str) -> dict:
+    """Export the current scene to output_path (a .glb), then re-import it
+    into a throwaway scene to confirm the exported file parses cleanly.
+
+    Returns {"path": output_path, "reimport_ok": bool}. Does not raise on a
+    re-import parse failure — that's reported as reimport_ok=False so the
+    caller (build_character.py) can decide how to surface it alongside
+    validate.py's deeper checks, rather than this module owning two different
+    kinds of failure reporting.
+    """
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    bpy.ops.export_scene.gltf(filepath=str(out), **EXPORT_KWARGS)
+
+    # Re-import into a throwaway scene (not the current one, so the export
+    # source scene is untouched) purely as a parse smoke test. Track the
+    # original scene explicitly and always restore it via
+    # bpy.context.window.scene, rather than checking name == "Scene" (which
+    # breaks if the source scene was ever renamed) or relying on whatever
+    # scene an operator happens to leave active.
+    original_scene = bpy.context.window.scene
+    scratch_scene = bpy.data.scenes.new("export_reimport_scratch")
+    reimport_ok = True
+    try:
+        bpy.context.window.scene = scratch_scene
+        bpy.ops.import_scene.gltf(filepath=str(out))
+    except RuntimeError:
+        reimport_ok = False
+    finally:
+        bpy.context.window.scene = original_scene
+        bpy.data.scenes.remove(scratch_scene)
+
+    return {"path": str(out), "reimport_ok": reimport_ok}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_blender_export.py -v`
+Expected: PASS (1 test), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/assetgen/blender/export.py tests/python/test_blender_export.py \
+        tests/python/blender_test_helpers.py
+git commit -m "Add blender/export.py: pinned GLB export + reimport smoke test"
+```
+
+---
+
+### Task 11: `blender/validate.py`
+
+**Design note:** unlike every other unit in this chunk, `validate.py` operates on
+the *exported* `.glb` file's bytes directly (parsing the glTF JSON chunk, exactly
+as done ad hoc during this session's earlier villager-debugging work) rather than
+on a live Blender scene. **It does not `import bpy`** and is therefore testable as
+plain Python, no headless Blender invocation needed — this is deliberate: it's the
+automated gate that would have caught the "floating disconnected villager" class of
+bug automatically (per the spec), and a pure-Python implementation makes it trivial
+to unit-test with small hand-built GLB fixtures instead of requiring a real Blender
+export for every test case.
+
+**Files:**
+- Create: `tools/assetgen/blender/validate.py`
+- Test: `tests/python/test_blender_validate.py`
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_blender_validate.py
+import json
+import struct
+
+from tools.assetgen.blender import validate
+
+# Minimal hand-built GLB fixtures (JSON chunk only, no binary buffer needed for
+# node/animation-name assertions — bounding-box checks use accessor min/max,
+# which glTF stores in the JSON chunk itself, not the binary blob).
+
+# Chunk 1/2's armature convention (Task 3's design-bible amendment /
+# archetype_spec.KNOWN_BONES) — every bone this fixture's node list must name
+# for the hierarchy/skinning checks below to exercise real bone names.
+_ALL_BONES = [
+    "Hips", "Spine", "Neck", "Head",
+    "Shoulder.L", "Arm.L", "ForeArm.L", "Hand.L",
+    "Shoulder.R", "Arm.R", "ForeArm.R", "Hand.R",
+    "UpLeg.L", "Leg.L", "Foot.L", "ToeBase.L",
+    "UpLeg.R", "Leg.R", "Foot.R", "ToeBase.R",
+]
+
+
+def _make_glb(gltf_json: dict) -> bytes:
+    json_bytes = json.dumps(gltf_json).encode("utf-8")
+    json_bytes += b" " * (-len(json_bytes) % 4)  # glTF requires 4-byte alignment
+    json_chunk = struct.pack("<II", len(json_bytes), 0x4E4F534A) + json_bytes  # "JSON"
+    header = struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(json_bytes))  # "glTF"
+    return header + json_chunk
+
+
+def _valid_gltf_json(tri_count: int = 100, skinned: bool = True) -> dict:
+    # Node 0 is Hips (root, has children so the hierarchy reads as connected);
+    # every other bone is a flat child of it — good enough for these
+    # name/hierarchy assertions, since validate.py doesn't need the exact
+    # real skeleton shape, just that every mandatory bone name is present and
+    # Hips has children.
+    nodes = [{"name": "Hips", "children": list(range(1, len(_ALL_BONES)))}]
+    nodes += [{"name": name} for name in _ALL_BONES[1:]]
+
+    attributes = {"POSITION": 0}
+    if skinned:
+        attributes["JOINTS_0"] = 1
+        attributes["WEIGHTS_0"] = 2
+
+    return {
+        "nodes": nodes,
+        "meshes": [
+            {"primitives": [{"attributes": attributes, "indices": 3, "mode": 4}]},
+        ],
+        "accessors": [
+            {
+                "count": tri_count * 3 + 1,  # deliberately NOT a multiple of 3,
+                # to prove the tri count comes from the indices accessor, not
+                # from POSITION's raw vertex count
+                "type": "VEC3",
+                "min": [-0.2, 0.0, -0.15],
+                "max": [0.2, 1.0, 0.15],
+            },
+            {"count": 1, "type": "VEC4"},  # JOINTS_0 placeholder accessor
+            {"count": 1, "type": "VEC4"},  # WEIGHTS_0 placeholder accessor
+            {"count": tri_count * 3, "type": "SCALAR"},  # indices accessor
+        ],
+        "animations": [
+            {"name": "idle-loop"}, {"name": "walk-loop"}, {"name": "run-loop"},
+            {"name": "wave"}, {"name": "stir"},
+        ],
+    }
+
+
+def test_validate_passes_on_well_formed_glb():
+    glb_bytes = _make_glb(_valid_gltf_json(tri_count=100))
+    report = validate.check(glb_bytes)
+    assert report.ok is True
+    assert report.errors == []
+
+
+def test_validate_fails_on_missing_clip():
+    gltf_json = _valid_gltf_json()
+    gltf_json["animations"] = [a for a in gltf_json["animations"] if a["name"] != "stir"]
+    glb_bytes = _make_glb(gltf_json)
+    report = validate.check(glb_bytes)
+    assert report.ok is False
+    assert any("stir" in e for e in report.errors)
+
+
+def test_validate_fails_on_missing_bone():
+    gltf_json = _valid_gltf_json()
+    gltf_json["nodes"] = [n for n in gltf_json["nodes"] if n["name"] != "ForeArm.R"]
+    # Drop ForeArm.R from Hips's children list too, so indices still line up.
+    gltf_json["nodes"][0]["children"] = list(range(1, len(gltf_json["nodes"])))
+    glb_bytes = _make_glb(gltf_json)
+    report = validate.check(glb_bytes)
+    assert report.ok is False
+    assert any("ForeArm.R" in e for e in report.errors)
+
+
+def test_validate_fails_on_disconnected_hips():
+    gltf_json = _valid_gltf_json()
+    gltf_json["nodes"][0]["children"] = []
+    glb_bytes = _make_glb(gltf_json)
+    report = validate.check(glb_bytes)
+    assert report.ok is False
+    assert any("Hips" in e and "children" in e for e in report.errors)
+
+
+def test_validate_fails_on_unskinned_mesh():
+    gltf_json = _valid_gltf_json(skinned=False)
+    glb_bytes = _make_glb(gltf_json)
+    report = validate.check(glb_bytes)
+    assert report.ok is False
+    assert any("skin" in e.lower() for e in report.errors)
+
+
+def test_validate_fails_over_tri_budget():
+    glb_bytes = _make_glb(_valid_gltf_json(tri_count=2000))
+    report = validate.check(glb_bytes)
+    assert report.ok is False
+    assert any("tri" in e.lower() for e in report.errors)
+
+
+def test_validate_fails_on_degenerate_bounding_box():
+    gltf_json = _valid_gltf_json()
+    # min == max on the Y axis -> zero height, the "floating disconnected
+    # villager" class of bug this gate exists to catch.
+    gltf_json["accessors"][0]["min"] = [-0.2, 0.5, -0.15]
+    gltf_json["accessors"][0]["max"] = [0.2, 0.5, 0.15]
+    glb_bytes = _make_glb(gltf_json)
+    report = validate.check(glb_bytes)
+    assert report.ok is False
+    assert any("height" in e.lower() or "bounding" in e.lower() for e in report.errors)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_blender_validate.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named
+'tools.assetgen.blender.validate'`
+
+- [ ] **Step 3: Write the implementation**
+
+`validate.py` imports `KNOWN_BONES` from `archetype_spec.py` (Task 4/Chunk 2) so the
+bone-hierarchy check below stays in sync with the one place that convention is
+already defined, rather than duplicating the bone-name list a third time.
+
+```python
+# tools/assetgen/blender/validate.py
+"""Parses an exported character .glb directly (JSON chunk only) and asserts
+the bone-hierarchy/skinning/bounding-box/tri-budget/clip-name gate described
+in the spec's Testing section — the automated check that would have caught
+the "floating disconnected villager" class of bug (correct-looking parts,
+wrong connectivity or scale) automatically instead of relying on a human
+looking at a screenshot.
+
+Deliberately has no `import bpy` — this operates on the exported file's bytes,
+so it's plain-Python testable (see this task's test file for hand-built GLB
+fixtures) and can also be run standalone against any already-built .glb
+without needing Blender at all.
+"""
+from __future__ import annotations
+
+import json
+import struct
+from dataclasses import dataclass, field
+
+from .archetype_spec import KNOWN_BONES
+
+TRI_BUDGET = 1500
+EXPECTED_CLIP_NAMES = frozenset({"idle-loop", "walk-loop", "run-loop", "wave", "stir"})
+MIN_HEIGHT_M = 0.5  # a character shorter than this is almost certainly a bug
+MAX_HEIGHT_M = 2.5
+
+
+@dataclass
+class ValidationReport:
+    ok: bool
+    errors: list[str] = field(default_factory=list)
+
+
+def _parse_glb_json_chunk(glb_bytes: bytes) -> dict:
+    magic, version, length = struct.unpack_from("<III", glb_bytes, 0)
+    if magic != 0x46546C67:
+        raise ValueError("not a GLB file (bad magic)")
+    chunk_length, chunk_type = struct.unpack_from("<II", glb_bytes, 12)
+    if chunk_type != 0x4E4F534A:  # "JSON"
+        raise ValueError("first GLB chunk is not JSON")
+    json_bytes = glb_bytes[20:20 + chunk_length]
+    return json.loads(json_bytes.decode("utf-8"))
+
+
+def _check_bone_hierarchy(gltf: dict, errors: list[str]) -> None:
+    """Every mandatory bone name from KNOWN_BONES (Chunk 1/2's armature
+    convention) must be present among exported node names, and the root
+    (Hips) must have at least one child. This is the direct check for an
+    armature that got exported disconnected from the rest of the rig (as
+    opposed to the bounding-box height check below, which only catches
+    disconnection indirectly, via an implausible resulting size).
+    """
+    node_names = {n.get("name") for n in gltf.get("nodes", [])}
+    missing_bones = KNOWN_BONES - node_names
+    for bone in sorted(missing_bones):
+        errors.append(f"missing expected bone {bone!r} in exported node hierarchy")
+
+    hips_nodes = [n for n in gltf.get("nodes", []) if n.get("name") == "Hips"]
+    if hips_nodes and not hips_nodes[0].get("children"):
+        errors.append("Hips node has no children — armature hierarchy looks disconnected")
+
+
+def _check_skinning(gltf: dict, errors: list[str]) -> None:
+    """Every mesh primitive must be skinned (JOINTS_0/WEIGHTS_0 attributes
+    present). An unskinned mesh is exactly the "floating disconnected
+    villager" bug: a correct-looking mesh sitting in the scene with no bone
+    deformation wired up at all, which the bounding-box/tri checks alone
+    would not catch (an unskinned mesh can still have a perfectly plausible
+    height and tri count).
+    """
+    for mesh in gltf.get("meshes", []):
+        for prim in mesh.get("primitives", []):
+            attrs = prim.get("attributes", {})
+            if "JOINTS_0" not in attrs or "WEIGHTS_0" not in attrs:
+                errors.append(
+                    "mesh primitive is missing JOINTS_0/WEIGHTS_0 attributes "
+                    "— not skinned to the armature"
+                )
+
+
+def _count_tris(gltf: dict) -> int:
+    """Mode 4 = TRIANGLES. Prefer the primitive's `indices` accessor count
+    (glTF's indexed-triangle-list convention, which is what Blender's glTF
+    exporter always produces) over the raw POSITION vertex count — POSITION
+    holds deduplicated vertices shared across faces, so `POSITION.count / 3`
+    undercounts (or is simply wrong) for any indexed mesh. Only fall back to
+    POSITION/3 for a primitive with no `indices` (a non-indexed export,
+    which this pipeline doesn't produce but which is valid glTF).
+    """
+    total_tris = 0
+    for mesh in gltf.get("meshes", []):
+        for prim in mesh.get("primitives", []):
+            if prim.get("mode", 4) != 4:
+                continue
+            if "indices" in prim:
+                accessor = gltf["accessors"][prim["indices"]]
+                total_tris += accessor["count"] // 3
+            else:
+                accessor_index = prim.get("attributes", {}).get("POSITION")
+                if accessor_index is None:
+                    continue
+                accessor = gltf["accessors"][accessor_index]
+                total_tris += accessor["count"] // 3
+    return total_tris
+
+
+def check(glb_bytes: bytes) -> ValidationReport:
+    errors: list[str] = []
+    gltf = _parse_glb_json_chunk(glb_bytes)
+
+    # Clip-name check.
+    actual_clip_names = {a.get("name") for a in gltf.get("animations", [])}
+    missing_clips = EXPECTED_CLIP_NAMES - actual_clip_names
+    for clip in sorted(missing_clips):
+        errors.append(f"missing expected animation clip {clip!r}")
+    extra_clips = actual_clip_names - EXPECTED_CLIP_NAMES
+    for clip in sorted(extra_clips):
+        errors.append(f"unexpected animation clip {clip!r} (not in avatar.gd's contract)")
+
+    _check_bone_hierarchy(gltf, errors)
+    _check_skinning(gltf, errors)
+
+    total_tris = _count_tris(gltf)
+    if total_tris > TRI_BUDGET:
+        errors.append(f"tri count {total_tris} exceeds budget of {TRI_BUDGET}")
+
+    # Bounding-box / proportion check: walk only the POSITION accessor of
+    # each mesh primitive (not every VEC3 accessor in the file — normals,
+    # tangents, and morph-target deltas are also VEC3 and would corrupt this
+    # if scanned indiscriminately) and take the overall Y-axis span as
+    # "standing height."
+    y_min, y_max = None, None
+    for mesh in gltf.get("meshes", []):
+        for prim in mesh.get("primitives", []):
+            accessor_index = prim.get("attributes", {}).get("POSITION")
+            if accessor_index is None:
+                continue
+            accessor = gltf["accessors"][accessor_index]
+            if accessor.get("type") != "VEC3" or "min" not in accessor or "max" not in accessor:
+                continue
+            lo, hi = accessor["min"][1], accessor["max"][1]
+            y_min = lo if y_min is None else min(y_min, lo)
+            y_max = hi if y_max is None else max(y_max, hi)
+    if y_min is None:
+        errors.append("no POSITION accessor with bounding-box min/max found")
+    else:
+        height = y_max - y_min
+        if height < MIN_HEIGHT_M:
+            errors.append(
+                f"bounding-box height {height:.3f}m is below the minimum "
+                f"plausible height {MIN_HEIGHT_M}m — likely a disconnected/"
+                "collapsed mesh"
+            )
+        elif height > MAX_HEIGHT_M:
+            errors.append(
+                f"bounding-box height {height:.3f}m exceeds the maximum "
+                f"plausible height {MAX_HEIGHT_M}m"
+            )
+
+    return ValidationReport(ok=not errors, errors=errors)
+
+
+def check_file(path: str) -> ValidationReport:
+    """Convenience wrapper: read a .glb file from disk and check() it."""
+    with open(path, "rb") as f:
+        return check(f.read())
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_blender_validate.py -v`
+Expected: PASS (7 tests) — this test does NOT need `requires_blender`/headless
+Blender at all, per the design note above.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/assetgen/blender/validate.py tests/python/test_blender_validate.py
+git commit -m "Add blender/validate.py: pure-Python GLB structural/proportion gate"
+```
+
+---
+
+## Chunk 4: build orchestrator and build.py integration
+
+This chunk adds the `build_character.py` orchestrator that calls Chunk 1-3's units
+in the fixed order the spec's architecture table requires, plus a `__main__` CLI
+entry point on that same file, and wires a generic Blender-character build path
+into `build.py` that shells out to it directly. It deliberately does NOT yet
+migrate the real Wren/villager archetypes onto this pipeline or delete the old
+`character_gen.py` registry entries — that's a separate future chunk (renumbered
+below), which needs a review checkpoint of its own per the spec's migration scope
+note. This chunk proves the full pipeline end-to-end using a minimal test
+archetype only.
+
+### Task 12: `blender/build_character.py` orchestrator + CLI entry point
+
+**Files:**
+- Create: `tools/assetgen/blender/build_character.py`
+- Test: `tests/python/test_build_character.py`
+
+Per the spec ("top-level `blender/build_character.py` orchestrator ... is the only
+thing `build.py` shells out to" / "returns a non-zero exit code and structured
+stderr ... on any error"), this module needs two things: the `build()` function
+(the fixed-order orchestrator, testable directly inside a headless-Blender driver
+like every other unit in this chunk) **and** a `__main__` CLI entry point, since
+`build.py` (Task 13) invokes this file directly via `blender --background --python
+tools/assetgen/blender/build_character.py -- ...` — no intermediate ad hoc driver
+script.
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_build_character.py
+import json
+import subprocess
+import sys
+
+from tests.python.blender_test_helpers import (
+    REPO_ROOT,
+    requires_blender,
+    run_in_blender,
+    scratch_output_path,
+)
+
+
+@requires_blender
+def test_build_character_runs_all_units_in_order():
+    out_path = scratch_output_path(".glb")
+    driver = f'''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import build_character
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+spec = ArchetypeSpec(
+    name="villager", bone_scales={{"UpLeg.L": 0.95, "UpLeg.R": 0.95}},
+    clothing=[], palette={{}},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+info = build_character.build(spec, r"{out_path}")
+print("RESULT:" + json.dumps(info))
+'''
+    try:
+        result = run_in_blender(driver)
+        assert result["ok"] is True
+        assert result["path"] == str(out_path)
+        assert out_path.exists()
+    finally:
+        out_path.unlink(missing_ok=True)
+
+
+@requires_blender
+def test_build_character_cli_writes_glb_and_exits_zero():
+    out_path = scratch_output_path(".glb")
+    spec_json = json.dumps({
+        "name": "villager", "bone_scales": {}, "clothing": [], "palette": {},
+        "clips": ["idle", "walk", "run", "wave", "stir"],
+    })
+    script_path = REPO_ROOT / "tools/assetgen/blender/build_character.py"
+    try:
+        proc = subprocess.run(
+            ["blender", "--background", "--python", str(script_path), "--",
+             "--spec-json", spec_json, "--output", str(out_path)],
+            capture_output=True, text=True, timeout=120, cwd=str(REPO_ROOT),
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert out_path.exists()
+        result_lines = [
+            line for line in proc.stdout.splitlines() if line.startswith("RESULT:")
+        ]
+        info = json.loads(result_lines[-1][len("RESULT:"):])
+        assert info["ok"] is True
+    finally:
+        out_path.unlink(missing_ok=True)
+
+
+@requires_blender
+def test_build_character_cli_exits_nonzero_with_structured_stderr_on_bad_spec():
+    script_path = REPO_ROOT / "tools/assetgen/blender/build_character.py"
+    # Missing mandatory clips -> ArchetypeSpec construction itself raises.
+    spec_json = json.dumps({
+        "name": "villager", "bone_scales": {}, "clothing": [], "palette": {},
+        "clips": ["idle"],
+    })
+    proc = subprocess.run(
+        ["blender", "--background", "--python", str(script_path), "--",
+         "--spec-json", spec_json, "--output", "/dev/null/unused.glb"],
+        capture_output=True, text=True, timeout=120, cwd=str(REPO_ROOT),
+    )
+    assert proc.returncode != 0
+    error_lines = [
+        line for line in proc.stderr.splitlines() if line.startswith("ERROR:")
+    ]
+    assert error_lines, proc.stderr
+    payload = json.loads(error_lines[-1][len("ERROR:"):])
+    assert "stage" in payload and "message" in payload
+
+
+@requires_blender
+def test_cli_main_exits_nonzero_and_reports_error_on_reported_validation_failure():
+    # Exercises _cli_main's "reported (non-exception) ok=False" branch. Runs
+    # inside headless Blender (via run_in_blender), like every other test in
+    # this chunk — build_character.py transitively imports bpy (through
+    # animate.py/clothing.py/etc.), so it can't be imported in the host pytest
+    # process at all, monkeypatched or not.
+    driver = '''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import build_character
+
+def fake_build(spec, output_path):
+    return {"ok": False, "path": output_path, "errors": ["tri count too high"]}
+
+build_character.build = fake_build
+spec_json = json.dumps({
+    "name": "villager", "bone_scales": {}, "clothing": [], "palette": {},
+    "clips": ["idle", "walk", "run", "wave", "stir"],
+})
+exit_code = build_character._cli_main(["--spec-json", spec_json, "--output", "unused.glb"])
+print("RESULT:" + json.dumps({"exit_code": exit_code}))
+'''
+    result = run_in_blender(driver)
+    assert result["exit_code"] == 1
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_build_character.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named
+'tools.assetgen.blender.build_character'` (or SKIPPED without Blender)
+
+- [ ] **Step 3: Write the implementation**
+
+```python
+# tools/assetgen/blender/build_character.py
+"""Orchestrator: calls every archetype-variation unit in the fixed order the
+spec's architecture table requires, for one ArchetypeSpec, producing a
+validated .glb. This is the only module build.py shells out to for character
+builds (see Task 13) — it's invoked directly as a Blender `--python` script
+(not via an intermediate driver file), so it also exposes a `__main__` CLI
+entry point satisfying the spec's error-handling contract: a non-zero exit
+code and a structured `ERROR:<json>` line on stderr naming which stage failed.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+# This file is invoked two ways: as a normal package module (`from
+# tools.assetgen.blender import build_character`, e.g. from tests or
+# build_character.build() callers) and directly by Blender as a `--python`
+# script (`blender --background --python
+# tools/assetgen/blender/build_character.py -- ...`, from build.py's
+# subprocess call in Task 13). In the second case Python treats this file as
+# `__main__`, not as part of the `tools.assetgen.blender` package, so relative
+# imports (`from . import ...`) would fail — put the repo root on sys.path and
+# use absolute imports instead, which work in both cases.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from tools.assetgen.blender import (  # noqa: E402 - see sys.path note above
+    animate, clothing, export, loader, materials, proportions, validate,
+)
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec  # noqa: E402
+
+
+def build(spec: ArchetypeSpec, output_path: str) -> dict:
+    """Run loader -> proportions -> clothing -> materials -> animate -> export
+    -> validate for `spec`, writing the result to output_path.
+
+    Returns {"ok": bool, "path": str, "errors": [...]}. Any unit raising
+    (BaseAssetStructureError, UnknownClothingPieceError, UnknownClipError,
+    etc.) propagates unchanged — this orchestrator does not swallow errors;
+    only validate.py's *report* (as opposed to a raised exception) is folded
+    into the returned dict's "errors" list, since a failed validation is an
+    expected, structured outcome (not a bug in the pipeline itself) that the
+    caller (_cli_main, below) needs to see without a stack trace.
+    """
+    loader.load_base()
+    proportions.apply(spec)
+    clothing.apply(spec)
+    materials.apply(spec)
+    animate.bake(spec)
+    export_info = export.export(spec, output_path)
+
+    report = validate.check_file(output_path)
+    errors = list(report.errors)
+    if not export_info["reimport_ok"]:
+        errors.append("exported GLB failed to re-import cleanly")
+
+    return {"ok": not errors, "path": export_info["path"], "errors": errors}
+
+
+def _cli_main(argv: list[str]) -> int:
+    """CLI entry point for build.py's subprocess call. Reads the spec as a
+    single JSON blob (--spec-json) rather than one flag per ArchetypeSpec
+    field, since the field set is expected to grow (see Chunk 5's Wren-
+    specific clothing work) and a single JSON payload avoids re-plumbing the
+    CLI every time a field is added.
+
+    Per the spec's error-handling section ("build_character.py returns a
+    non-zero exit code and structured stderr ... on any error — bmesh op
+    failure, missing bone name, failed validate.py gate"), EVERY failure mode
+    below — bad spec JSON, an exception raised by build(), and a *reported*
+    validate.py failure (build() returning ok=False without raising) — exits
+    non-zero and prints one `ERROR:<json>` line ({"stage": ..., "message":
+    ...}) to stderr, naming which stage failed. `RESULT:<json>` is printed to
+    stdout whenever build() itself completes without raising (i.e. for both
+    ok=True and ok=False outcomes — the caller can always inspect it for the
+    "errors" list), but exit code 0 is reserved for ok=True only; any ok=False
+    or exception path also gets the `ERROR:` stderr line above and a non-zero
+    return.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--spec-json", required=True)
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args(argv)
+
+    try:
+        spec = ArchetypeSpec(**json.loads(args.spec_json))
+    except Exception as exc:  # noqa: BLE001 - reported, not re-raised, by design
+        print("ERROR:" + json.dumps({"stage": "spec", "message": str(exc)}), file=sys.stderr)
+        return 1
+
+    try:
+        result = build(spec, args.output)
+    except Exception as exc:  # noqa: BLE001 - reported, not re-raised, by design
+        print(
+            "ERROR:" + json.dumps({"stage": "build", "message": str(exc)}),
+            file=sys.stderr,
+        )
+        return 1
+
+    print("RESULT:" + json.dumps(result))
+    if not result["ok"]:
+        print(
+            "ERROR:" + json.dumps({"stage": "validate", "message": "; ".join(result["errors"])}),
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    # Blender passes everything after `--` through to sys.argv unchanged.
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
+    raise SystemExit(_cli_main(argv))
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_build_character.py -v`
+Expected: PASS (4 tests), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/assetgen/blender/build_character.py tests/python/test_build_character.py
+git commit -m "Add blender/build_character.py: orchestrator + CLI entry point"
+```
+
+---
+
+### Task 13: `build.py` integration — generic Blender character build path
+
+**Scope note:** this task adds a *reusable function* (`build_blender_character`) and
+the toolchain/error-handling wiring `build.py` needs, exercised here with a small
+throwaway test spec. It does **not** yet call this function for the real `wren`/
+`villager` archetypes or remove `character_gen.py`'s witch/villager registry
+entries — the spec's migration scope note (see "Migration of Wren and the
+villager") explicitly wants that as a separable, reviewable checkpoint, which is
+Chunk 5.
+
+Per the spec's exact wording, `build.py` "shells out to headless Blender (invoking
+`blender/build_character.py`)" directly — it does **not** write its own intermediate
+driver script. Task 12's CLI entry point (`--spec-json`/`--output` flags, `RESULT:`/
+`ERROR:` stdout/stderr convention) is what makes this possible, so this task is
+purely a `subprocess.run(["blender", "--background", "--python", <build_character.py
+path>, "--", ...])` call plus `returncode` handling — no temp file writing at all,
+which also sidesteps the earlier `/tmp`-vs-repo-local question entirely.
+
+**Files:**
+- Modify: `tools/assetgen/build.py`
+- Test: `tests/python/test_build_blender_character_integration.py`
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_build_blender_character_integration.py
+import pytest
+
+from tests.python.blender_test_helpers import requires_blender, scratch_output_path
+from tools.assetgen import build
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+
+@requires_blender
+def test_build_blender_character_writes_glb_and_manifest_entry(monkeypatch):
+    scratch_dir = scratch_output_path("").parent  # SCRATCH_OUTPUT_DIR, already created
+    monkeypatch.setattr(build, "OUT_DIR", scratch_dir)
+    spec = ArchetypeSpec(
+        name="test_archetype", bone_scales={}, clothing=[], palette={},
+        clips=["idle", "walk", "run", "wave", "stir"],
+    )
+    out_path = scratch_dir / "test_archetype.glb"
+    try:
+        entry = build.build_blender_character(spec)
+        assert out_path.exists()
+        assert entry["archetype"] == "test_archetype"
+        assert entry["ok"] is True
+    finally:
+        out_path.unlink(missing_ok=True)
+
+
+def test_build_blender_character_raises_clear_error_without_blender(monkeypatch):
+    from tools.assetgen.blender import toolchain
+
+    def fake_check(*args, **kwargs):
+        raise toolchain.BlenderNotFoundError("blender not found. " + toolchain.README_HINT)
+
+    monkeypatch.setattr(toolchain, "check_blender_available", fake_check)
+    spec = ArchetypeSpec(
+        name="test_archetype", bone_scales={}, clothing=[], palette={},
+        clips=["idle", "walk", "run", "wave", "stir"],
+    )
+    with pytest.raises(toolchain.BlenderNotFoundError, match="tools/assetgen/README.md"):
+        build.build_blender_character(spec)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_build_blender_character_integration.py -v`
+Expected: FAIL with `AttributeError: module 'tools.assetgen.build' has no attribute
+'build_blender_character'`
+
+- [ ] **Step 3: Write the implementation**
+
+Add to `tools/assetgen/build.py` (near the top, alongside existing imports and
+constants):
+
+```python
+import dataclasses
+import json
+import subprocess
+
+from .blender import toolchain
+from .blender.archetype_spec import ArchetypeSpec
+
+BLENDER_BUILD_TIMEOUT = 300  # seconds; a character build (mesh + 5 clips + export
+                             # + re-import) is expected to take well under this
+BUILD_CHARACTER_SCRIPT = REPO_ROOT / "tools/assetgen/blender/build_character.py"
+```
+
+Add the new function (near `build_all`, since it's the character-generation
+analogue of the `character_gen.generate()` calls already there):
+
+```python
+def build_blender_character(spec: ArchetypeSpec) -> dict:
+    """Build one v2 (Blender-backed) character archetype headlessly.
+
+    Checks Blender is available (fails loud, pointing at the README, per the
+    spec's error-handling section) before shelling out. Invokes
+    blender/build_character.py directly as a Blender `--python` script (its
+    `_cli_main`, see Task 12) — no intermediate driver file is written, since
+    build_character.py already exposes the CLI contract this needs.
+
+    Writes OUT_DIR/<spec.name>.glb and returns a manifest-entry dict:
+    {"archetype": spec.name, "ok": bool, "errors": [...], "path": str}.
+
+    Raises RuntimeError (wrapping build_character.py's structured `ERROR:<json>`
+    stderr line, naming which stage failed) if the subprocess exits non-zero,
+    per the spec's "non-zero exit code and structured stderr" requirement.
+    """
+    toolchain.check_blender_available()
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = OUT_DIR / f"{spec.name}.glb"
+    spec_json = json.dumps(dataclasses.asdict(spec))
+
+    proc = subprocess.run(
+        [
+            "blender", "--background", "--python", str(BUILD_CHARACTER_SCRIPT),
+            "--", "--spec-json", spec_json, "--output", str(output_path),
+        ],
+        capture_output=True, text=True, timeout=BLENDER_BUILD_TIMEOUT,
+        cwd=str(REPO_ROOT),
+    )
+
+    if proc.returncode != 0:
+        error_lines = [
+            line for line in proc.stderr.splitlines() if line.startswith("ERROR:")
+        ]
+        if error_lines:
+            try:
+                payload = json.loads(error_lines[-1][len("ERROR:"):])
+                detail = f"stage={payload.get('stage')!r}: {payload.get('message')}"
+            except json.JSONDecodeError:
+                detail = error_lines[-1]
+        else:
+            detail = proc.stderr
+        raise RuntimeError(
+            f"Blender build of archetype {spec.name!r} failed "
+            f"(exit {proc.returncode}): {detail}"
+        )
+
+    result_lines = [
+        line for line in proc.stdout.splitlines() if line.startswith("RESULT:")
+    ]
+    if not result_lines:
+        raise RuntimeError(
+            f"Blender build of archetype {spec.name!r} exited 0 but produced no "
+            f"RESULT line — stdout={proc.stdout!r} stderr={proc.stderr!r}"
+        )
+    info = json.loads(result_lines[-1][len("RESULT:"):])
+    return {"archetype": spec.name, **info}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_build_blender_character_integration.py -v`
+Expected: PASS (2 tests) — the first is SKIPPED without Blender, the second (the
+missing-Blender error-message check, which mocks `toolchain.check_blender_available`
+and needs no real Blender) always runs.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/assetgen/build.py tests/python/test_build_blender_character_integration.py
+git commit -m "Wire generic Blender character build path into build.py"
+```
+
+---
+
+## Chunk 5 (not yet written): Wren/villager migration
+
+Per the spec's "Migration of Wren and the villager" section, this final chunk
+covers: rebuilding Wren (base pipeline first with placeholder clothing as one
+checkpoint, then her redesigned bohemian outfit as a separable follow-up
+checkpoint), rebuilding the villager as the second archetype on the shared base,
+in-Godot verification (`AnimationPlayer.get_animation_list()` matches exactly,
+`character_gallery.tscn` still works), removing the old witch/villager entries from
+`tools/assetgen/part_registry.py`, and updating `tools/assetgen/README.md` /
+`docs/asset-inventory.md`. Not drafted yet — see this plan's next step.
