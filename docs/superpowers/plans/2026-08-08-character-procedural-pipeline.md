@@ -31,7 +31,7 @@ Full design: `docs/superpowers/specs/2026-08-08-character-procedural-pipeline-de
 - Create: `tools/assetgen/character_spec.py`
 - Test: `tests/python/test_character_spec.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/python/test_character_spec.py
@@ -60,12 +60,12 @@ def test_spec_accepts_explicit_part_choices():
     assert spec.parts["headwear"] == "witch_hat"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m pytest tests/python/test_character_spec.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'tools.assetgen.character_spec'`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # tools/assetgen/character_spec.py
@@ -102,12 +102,12 @@ class CharacterSpec:
             object.__setattr__(self, "root_name", self.archetype)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m pytest tests/python/test_character_spec.py -v`
 Expected: PASS (3 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/assetgen/character_spec.py tests/python/test_character_spec.py
@@ -122,7 +122,7 @@ git commit -m "feat(character-pipeline): add CharacterSpec schema"
 - Create: `tools/assetgen/rig_contract.py`
 - Test: `tests/python/test_rig_contract.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/python/test_rig_contract.py
@@ -172,12 +172,12 @@ def test_loop_clip_names_include_baseline_loops():
     assert {"idle-loop", "walk-loop", "run-loop"} <= rig_contract.LOOP_CLIP_NAMES
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m pytest tests/python/test_rig_contract.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # tools/assetgen/rig_contract.py
@@ -251,12 +251,12 @@ PARENT_OF = {
 LOOP_CLIP_NAMES = frozenset({"idle-loop", "walk-loop", "run-loop", "stir-loop"})
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m pytest tests/python/test_rig_contract.py -v`
 Expected: PASS (6 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/assetgen/rig_contract.py tests/python/test_rig_contract.py
@@ -282,7 +282,7 @@ byte-identical.
   duplicated functions are removed from `character.py` in Task 7)
 - Test: `tests/python/test_part_registry.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/python/test_part_registry.py
@@ -323,7 +323,7 @@ def test_witch_skirt_matches_pre_migration_geometry():
     assert builder.tri_count == 20  # lathe: 10 segments, 1 ring pair, both caps
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m pytest tests/python/test_part_registry.py -v`
 Expected: FAIL with `ModuleNotFoundError`
@@ -336,7 +336,7 @@ Run: `python3 -c "from tools.assetgen.character import _skirt; print(_skirt().tr
 Use that printed number in the test above (the plan's placeholder of `20` is an
 estimate — replace it with the actual printed value before proceeding).
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Move the seven private builder functions out of `character.py` verbatim into
 `part_registry.py`, renaming them to public, registry-keyed names. Copy the exact
@@ -455,13 +455,13 @@ migration) removes them once `character_gen.py` exists and the byte-identical
 regression test is in place. Leaving them temporarily duplicated is fine; it keeps
 every task's test suite green independently.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m pytest tests/python/test_part_registry.py -v`
 Expected: PASS (5 passed) — update the `test_witch_skirt_matches_pre_migration_geometry`
 assertion with the real tri_count from Step 2 before running.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/assetgen/part_registry.py tests/python/test_part_registry.py
@@ -493,7 +493,7 @@ module-level constants).
   generic `pose: dict[str, tuple]` parameter and has no knowledge of Wren specifically.
 - Test: `tests/python/test_animation_contract.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/python/test_animation_contract.py
@@ -538,12 +538,12 @@ def test_rotation_keyframes_are_unit_quaternions():
                 assert abs(length - 1.0) < 1e-4
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m pytest tests/python/test_animation_contract.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # tools/assetgen/animation_contract.py
@@ -724,12 +724,12 @@ def build_baseline_clips(pose: dict, hat_tilt_deg: float = 0.0,
     return [builders[key]() for key in wanted]
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m pytest tests/python/test_animation_contract.py -v`
 Expected: PASS (3 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/assetgen/animation_contract.py tests/python/test_animation_contract.py
@@ -744,7 +744,7 @@ git commit -m "feat(character-pipeline): add parameterized animation contract"
 - Create: `tools/assetgen/character_gen.py`
 - Test: `tests/python/test_character_gen.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/python/test_character_gen.py
@@ -802,12 +802,12 @@ def test_unknown_archetype_raises_value_error():
         character_gen.generate(CharacterSpec(archetype="nope", seed=0))
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m pytest tests/python/test_character_gen.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # tools/assetgen/character_gen.py
@@ -953,12 +953,12 @@ def resolved_parts_for(spec) -> dict:
     return _resolve_parts(spec)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m pytest tests/python/test_character_gen.py -v`
 Expected: PASS (4 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/assetgen/character_gen.py tests/python/test_character_gen.py
@@ -973,7 +973,7 @@ git commit -m "feat(character-pipeline): add generator/assembler"
 - Create: `tools/assetgen/character_validate.py`
 - Test: `tests/python/test_character_validate.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/python/test_character_validate.py
@@ -1047,12 +1047,12 @@ def test_non_closing_loop_clip_raises():
         character_validate.validate(rig, [broken_idle] + other_clips)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m pytest tests/python/test_character_validate.py -v`
 Expected: FAIL with `ModuleNotFoundError`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # tools/assetgen/character_validate.py
@@ -1152,12 +1152,12 @@ def validate(rig, clips, tri_budget: int = DEFAULT_TRI_BUDGET) -> None:
         raise ValueError(f"triangle budget exceeded: {tris} > {tri_budget}")
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m pytest tests/python/test_character_validate.py -v`
 Expected: PASS (6 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/assetgen/character_validate.py tests/python/test_character_validate.py
@@ -1181,7 +1181,7 @@ git commit -m "feat(character-pipeline): add rig/animation validator"
   through the new wrappers — this is the regression proof)
 - Test: `tests/python/test_character_migration.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 First, capture the pre-migration reference GLB bytes as a fixture so this test can
 prove nothing changed:
@@ -1219,13 +1219,13 @@ def test_wren_spec_produces_byte_identical_output():
 Run: `python3 -m pytest tests/python/test_character_migration.py -v`
 Expected: FAIL — `character.WREN_SPEC` doesn't exist yet.
 
-- [ ] **Step 2: Confirm the failure reason is "not yet migrated", not a bad hash**
+- [x] **Step 2: Confirm the failure reason is "not yet migrated", not a bad hash**
 
 Run: `python3 -m pytest tests/python/test_character_migration.py -v`
 Expected: FAIL with `AttributeError: module 'tools.assetgen.character' has no
 attribute 'WREN_SPEC'`
 
-- [ ] **Step 3: Replace `character.py` with a thin module**
+- [x] **Step 3: Replace `character.py` with a thin module**
 
 Remove the moved functions (`_skirt`, `_torso`, `_arm`, `_head`, `_hat`, `_braid`,
 `_boot`, `quat_axis`, `quat_mul`, `_sample`, `_rot_channel`, `_pos_channel`, `_idle`,
@@ -1347,7 +1347,7 @@ still passes.
 Now fill in the real hash in `test_character_migration.py` from Step 1's captured
 value.
 
-- [ ] **Step 4: Run tests to verify everything passes**
+- [x] **Step 4: Run tests to verify everything passes**
 
 Run: `python3 -m pytest tests/python/test_character.py tests/python/test_character_migration.py -v`
 Expected: PASS — all of `test_character.py`'s original assertions pass unchanged,
@@ -1359,7 +1359,7 @@ Run: `python3 -m tools.assetgen.build`
 Expected: `asset build OK`, with `wren.glb` byte-identical (compare
 `assets/generated/manifest.json`'s `wren.sha256` to the same captured hash).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/assetgen/character.py tools/assetgen/build.py tests/python/test_character_migration.py
@@ -1382,7 +1382,7 @@ plainer torso/head.
 - Modify: `tools/assetgen/character_gen.py` (add `villager` to `_ARCHETYPE_POSE`)
 - Test: `tests/python/test_villager_archetype.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/python/test_villager_archetype.py
@@ -1432,12 +1432,12 @@ def test_villager_headwear_and_hair_are_empty_placeholders():
     assert braid is not None and braid.mesh is None
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m pytest tests/python/test_villager_archetype.py -v`
 Expected: FAIL — `unknown archetype: 'villager'`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Add to `part_registry.py`:
 
@@ -1497,12 +1497,12 @@ Add to `character_gen.py`'s `_ARCHETYPE_POSE`:
 (`_ARCHETYPE_HAT_TILT_DEG` needs no `villager` entry — the default `0.0` from
 `.get(..., 0.0)` applies.)
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m pytest tests/python/test_villager_archetype.py -v`
 Expected: PASS (3 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/assetgen/part_registry.py tools/assetgen/character_gen.py tests/python/test_villager_archetype.py
@@ -1516,7 +1516,7 @@ git commit -m "feat(character-pipeline): add villager archetype as pipeline proo
 **Files:**
 - Create: `docs/asset-inventory.md`
 
-- [ ] **Step 1: Write the inventory table**
+- [x] **Step 1: Write the inventory table**
 
 Populate per the spec's source list: Wren, the 15-row `story-bible.md` cast table
 entries (kids and cats already one row each there), plus Clack & Click and the
@@ -1558,7 +1558,7 @@ have a backlog instead of guesswork. Populated per
 | village-hall-signal-house | building | Signal House interior/exterior | procedural or handcrafted (TBD Phase 3) | n/a | Phase 3 nature/building foundation | P2 | Phase 10 Act II debate arc | planned |
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add docs/asset-inventory.md
@@ -1572,12 +1572,12 @@ git commit -m "docs: add Asset Inventory Matrix for character/nature/building ba
 **Files:**
 - Create: `tools/assetgen/README.md`
 
-- [ ] **Step 1: Run the full pytest suite**
+- [x] **Step 1: Run the full pytest suite**
 
 Run: `python3 -m pytest tests/python -v`
 Expected: all tests pass, including every test file created/modified in this plan.
 
-- [ ] **Step 2: Write the tooling doc**
+- [x] **Step 2: Write the tooling doc**
 
 ```markdown
 # tools/assetgen — Character Pipeline
@@ -1616,7 +1616,7 @@ character_validate.validate(rig, clips)  # raises ValueError with details on fai
 per-character `archetype`, `seed`, `resolved_parts`, and contract version metadata.
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tools/assetgen/README.md
@@ -1627,13 +1627,13 @@ git commit -m "docs(character-pipeline): add tooling guide for parts/archetypes/
 
 ## Done-gate checklist (from the spec)
 
-- [ ] Wren regenerated through the new pipeline, byte-identical to Phase 1 output
+- [x] Wren regenerated through the new pipeline, byte-identical to Phase 1 output
       (Task 7's `test_character_migration.py`).
-- [ ] At least one additional archetype (`villager`) generated end-to-end with a
+- [x] At least one additional archetype (`villager`) generated end-to-end with a
       distinct seed (Task 8).
-- [ ] Validator catches missing node, missing clip, and over-budget tri count in
+- [x] Validator catches missing node, missing clip, and over-budget tri count in
       tests (Task 6); part-incompatibility is covered by `part_registry`'s
       `ValueError` on unknown part id (Task 3).
-- [ ] Full pytest suite green (Task 10).
-- [ ] Tooling doc written (Task 10).
-- [ ] Asset Inventory Matrix populated (Task 9).
+- [x] Full pytest suite green (Task 10).
+- [x] Tooling doc written (Task 10).
+- [x] Asset Inventory Matrix populated (Task 9).
