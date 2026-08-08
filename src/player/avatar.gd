@@ -5,7 +5,7 @@ extends Node3D
 ##
 ## Import note: clips are authored with "-loop" suffixes; Godot's importer
 ## strips the suffix and enables looping, so in-engine names are
-## idle / walk / run / stir (looping) and wave (one-shot).
+## idle / walk / run (looping) and wave / stir (one-shot gestures).
 
 const WREN_SCENE_PATH := "res://assets/generated/wren.glb"
 const BLEND_TIME := 0.25
