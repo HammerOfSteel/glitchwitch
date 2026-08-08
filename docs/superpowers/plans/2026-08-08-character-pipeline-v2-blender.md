@@ -331,11 +331,49 @@ no "write a failing test, then pass it" for mesh topology quality. Follow the sp
 freeze the final result as the headless-buildable script plus the committed `.blend`.
 
 **Files:**
+- Create: `tools/assetgen/blender/body_dims.py` (shared dimension constants — see
+  below; imported by both this script and Chunk 2's `clothing_parts/` modules so
+  clothing stays sized/positioned consistently with the body it layers over)
 - Create: `tools/assetgen/blender/author_base_humanoid.py` (the script; re-runnable,
   not auto-run by `make assets`)
 - Create: `tools/assetgen/blender/base_humanoid.blend` (committed binary output of
   running the script once)
 - Test: `tests/python/test_base_humanoid_asset.py`
+
+- [ ] **Step 0: Write the shared dimension constants module**
+
+```python
+# tools/assetgen/blender/body_dims.py
+"""Shared body-proportion constants (units = meters, total standing height 1.0m
+to match the existing v1 character scale in tools/assetgen/character.py).
+
+This is a plain-data module (no bpy import) so it's importable both by Blender
+scripts (author_base_humanoid.py, clothing_parts/*.py) and by plain pytest-run
+Python if ever needed for a non-Blender consistency check. These are STARTING
+values, not open choices — adjust only if a render check (Task 3 Step 2) fails
+the acceptance bar, and note any change in a comment here.
+"""
+from __future__ import annotations
+
+DIMS = {
+    "head_height": 0.28,      # ~28% of total height -> chibi-adjacent per spec
+    "torso_height": 0.32,
+    "torso_width": 0.24,
+    "hip_width": 0.22,
+    "upper_arm_length": 0.16,
+    "lower_arm_length": 0.14,
+    "hand_length": 0.08,
+    "upper_leg_length": 0.20,
+    "lower_leg_length": 0.18,
+    "foot_length": 0.10,
+    "bevel_width": 0.01,       # bevel modifier width, all parts start equal
+    "bevel_segments": 4,
+    "subsurf_levels": 2,
+}
+```
+
+Commit this alongside Step 6's commit (it's part of the same "author the base
+mesh" unit of work, not a separate task).
 
 - [ ] **Step 1: Draft the control-cage + armature script**
 
@@ -358,37 +396,22 @@ Concrete decisions locked in (not left open for "decide during iteration"):
   (bpy.ops.object.join) into ONE mesh object named "body" before armature
   binding. A single skinned mesh is the standard glTF/Blender-exporter shape and
   avoids weight-painting complexity across object boundaries. Clothing (added
-  later, per-archetype, in Task 6) stays as SEPARATE mesh objects bound to the
-  same armature — only the base body itself is a single joined mesh.
+  later, per-archetype, in Chunk 2's Task 7) stays as SEPARATE mesh objects
+  bound to the same armature — only the base body itself is a single joined
+  mesh.
 - Output path is always relative to this script's own location:
   Path(__file__).parent / "base_humanoid.blend" — i.e.
   tools/assetgen/blender/base_humanoid.blend — not a hand-typed absolute path.
 """
 import bpy
 import bmesh
+import sys
 from pathlib import Path
 
-OUTPUT_PATH = Path(__file__).resolve().parent / "base_humanoid.blend"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from body_dims import DIMS  # see this task's Step 0
 
-# Concrete first-pass dimensions (units = meters, total standing height 1.0m to
-# match the existing v1 character scale in tools/assetgen/character.py). These
-# are STARTING values, not open choices — adjust only if Step 2's render checks
-# fail the acceptance bar, and note any change here in the docstring above.
-DIMS = {
-    "head_height": 0.28,      # ~28% of total height -> chibi-adjacent per spec
-    "torso_height": 0.32,
-    "torso_width": 0.24,
-    "hip_width": 0.22,
-    "upper_arm_length": 0.16,
-    "lower_arm_length": 0.14,
-    "hand_length": 0.08,
-    "upper_leg_length": 0.20,
-    "lower_leg_length": 0.18,
-    "foot_length": 0.10,
-    "bevel_width": 0.01,       # bevel modifier width, all parts start equal
-    "bevel_segments": 4,
-    "subsurf_levels": 2,
-}
+OUTPUT_PATH = Path(__file__).resolve().parent / "base_humanoid.blend"
 
 # 1. Clear default scene.
 for obj in list(bpy.data.objects):
@@ -414,6 +437,17 @@ for obj in list(bpy.data.objects):
 #    come directly from DIMS above (e.g. Hips at torso_height/2 from the ground,
 #    Spine tail at Hips head + torso_height, etc.) so the skeleton always matches
 #    whatever DIMS values were last used to build the mesh.
+#    Left/right naming convention (fixed, not left to iteration — Chunk 2's
+#    archetype_spec.KNOWN_BONES and clothing/proportions units both hard-code
+#    this exact scheme): every paired bone uses a ".L"/".R" suffix, e.g.
+#    "Shoulder.L", "UpLeg.R" — this matches Blender's own Mirror
+#    modifier/vertex-group auto-mirroring convention (Blender specifically
+#    recognizes ".L"/".R", "_L"/"_R", "Left"/"Right" as mirrorable suffixes;
+#    ".L"/".R" is used here since it's the terser, Blender-native default), so
+#    the Mirror modifier used for body/clothing symmetry (Step 3, and
+#    clothing_parts/boots.py in Chunk 2) auto-flips vertex groups without
+#    manual remapping. Unpaired bones (Hips, Spine, Neck, Head) have no suffix.
+
 # 7. Parent "body" mesh to armature with automatic weights
 #    (bpy.ops.object.parent_set(type='ARMATURE_AUTO')). Automatic weights are the
 #    default outcome; only hand-correct a vertex group via bmesh/vertex_groups if
@@ -480,7 +514,8 @@ indefinitely.
 - [ ] **Step 3: Save the final `.blend` and commit it**
 
 ```bash
-git add tools/assetgen/blender/author_base_humanoid.py \
+git add tools/assetgen/blender/body_dims.py \
+        tools/assetgen/blender/author_base_humanoid.py \
         tools/assetgen/blender/base_humanoid.blend
 git commit -m "Author base_humanoid.blend: skinned chibi-proportioned body mesh"
 ```
@@ -533,4 +568,986 @@ Expected: PASS (2 tests) — only after Step 3's commit exists
 ```bash
 git add tests/python/test_base_humanoid_asset.py
 git commit -m "Add structural existence test for base_humanoid.blend"
+```
+
+---
+
+## Chunk 2: Archetype spec data + loader/proportions/clothing/materials units
+
+This chunk builds the four architecture-table units that turn `base_humanoid.blend`
+plus a data-only archetype description into a fully dressed, correctly-proportioned
+(but not yet animated/exported) Blender scene. It does not touch animation, export, or
+Godot — those are Chunk 3.
+
+**Shared testing approach for this chunk:** every module below (`loader.py`,
+`proportions.py`, `clothing.py`, `materials.py`) contains `import bpy` and therefore
+cannot be imported directly by pytest (see plan header's Tech Stack note). Each
+module's automated tests instead shell out to `blender --background --python` running
+a tiny driver script that imports the module *inside* Blender's interpreter, calls its
+function, and prints a JSON result line that the pytest test parses from stdout. This
+pattern is written once as a shared helper (Task 4) and reused by every later task in
+this chunk and Chunk 3.
+
+All of this chunk's automated tests are skipped (not failed) when `blender` isn't on
+`PATH`, using `toolchain.check_blender_available()` from Task 1 in a pytest
+`skipif`/fixture — consistent with `toolchain.py` already being the single place that
+knows how to detect Blender, and so contributors without Blender installed still get a
+clean `pytest` run (skipped, not red) on the rest of the suite.
+
+### Task 4: Headless-Blender test helper + `ArchetypeSpec` data contract
+
+**Files:**
+- Create: `tools/assetgen/blender/archetype_spec.py`
+- Create: `tests/python/blender_test_helpers.py`
+- Test: `tests/python/test_archetype_spec.py`
+
+- [ ] **Step 1: Write the failing test for `ArchetypeSpec`**
+
+```python
+# tests/python/test_archetype_spec.py
+import pytest
+
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+
+def test_archetype_spec_requires_name_and_bone_scales():
+    spec = ArchetypeSpec(
+        name="villager",
+        bone_scales={"Spine": 1.0, "UpLeg.L": 0.95, "UpLeg.R": 0.95},
+        clothing=["tunic", "boots"],
+        palette={"tunic": ("wood", 1), "boots": ("bark", 0)},
+        clips=["idle", "walk", "run", "wave", "stir"],
+    )
+    assert spec.name == "villager"
+    assert spec.bone_scales["Spine"] == 1.0
+
+
+def test_archetype_spec_rejects_unknown_bone_name():
+    with pytest.raises(ValueError, match="unknown bone"):
+        ArchetypeSpec(
+            name="villager",
+            bone_scales={"NotARealBone": 1.0},
+            clothing=[],
+            palette={},
+            clips=["idle", "walk", "run", "wave", "stir"],
+        )
+
+
+def test_archetype_spec_rejects_clothing_without_palette_entry():
+    with pytest.raises(ValueError, match="no palette entry"):
+        ArchetypeSpec(
+            name="villager",
+            bone_scales={},
+            clothing=["tunic"],
+            palette={},  # missing "tunic"
+            clips=["idle", "walk", "run", "wave", "stir"],
+        )
+
+
+def test_archetype_spec_rejects_missing_mandatory_clip():
+    with pytest.raises(ValueError, match="missing mandatory clip"):
+        ArchetypeSpec(
+            name="villager",
+            bone_scales={},
+            clothing=[],
+            palette={},
+            clips=["idle", "walk"],  # missing run/wave/stir
+        )
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_archetype_spec.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named 'tools.assetgen.blender.archetype_spec'`
+
+- [ ] **Step 3: Write the implementation**
+
+```python
+# tools/assetgen/blender/archetype_spec.py
+"""ArchetypeSpec: the data-only input contract for the v2 archetype-variation
+units (proportions.py, clothing.py, materials.py, animate.py).
+
+Deliberately separate from the existing tools/assetgen/character_spec.py
+(v1's CharacterSpec) rather than extending it: v1's CharacterSpec describes a
+part-registry-based mesh recipe (parts dict of PartSpec choices) which has no
+meaning for the Blender pipeline (armature bone scales, clothing mesh names,
+palette-cell assignments instead). Keeping them separate avoids a shared class
+that means two different things depending on which pipeline reads it. `build.py`
+picks which spec type to construct based on whether an archetype is on the v1 or
+v2 (Blender) path.
+
+Bone names are validated against the base armature's known bone list (mirrors
+rig_contract.py's role for v1: fail loud if a spec references a bone that
+doesn't exist, rather than silently no-op-ing in Blender).
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+# Must match the armature built by author_base_humanoid.py (Chunk 1, Task 3,
+# step 6), including its fixed ".L"/".R" left/right suffix convention
+# (Blender's own Mirror-modifier/vertex-group auto-mirroring naming scheme —
+# see Task 3 step 6's comment). Kept here (not re-derived from the live
+# .blend, which would require bpy) so this module stays pure-Python and
+# independently testable.
+KNOWN_BONES = frozenset({
+    "Hips", "Spine", "Neck", "Head",
+    "Shoulder.L", "Arm.L", "ForeArm.L", "Hand.L",
+    "Shoulder.R", "Arm.R", "ForeArm.R", "Hand.R",
+    "UpLeg.L", "Leg.L", "Foot.L", "ToeBase.L",
+    "UpLeg.R", "Leg.R", "Foot.R", "ToeBase.R",
+})
+
+# Matches avatar.gd's MOTION_CLIPS + GESTURE_CLIPS exactly (see spec's Godot
+# integration contract) — every archetype must define all five, even if some
+# turn out to be visually identical to another archetype's, so `animate.py`
+# always has a full clip set to bake.
+MANDATORY_CLIPS = ("idle", "walk", "run", "wave", "stir")
+
+
+@dataclass(frozen=True)
+class ArchetypeSpec:
+    name: str
+    bone_scales: dict[str, float] = field(default_factory=dict)
+    clothing: list[str] = field(default_factory=list)
+    palette: dict[str, tuple[str, int]] = field(default_factory=dict)
+    clips: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("ArchetypeSpec.name must be non-empty")
+        for bone in self.bone_scales:
+            if bone not in KNOWN_BONES:
+                raise ValueError(f"unknown bone name in bone_scales: {bone!r}")
+        for piece in self.clothing:
+            if piece not in self.palette:
+                raise ValueError(f"clothing piece {piece!r} has no palette entry")
+        missing = [c for c in MANDATORY_CLIPS if c not in self.clips]
+        if missing:
+            raise ValueError(f"missing mandatory clip(s): {missing}")
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_archetype_spec.py -v`
+Expected: PASS (4 tests)
+
+- [ ] **Step 5: Write the shared headless-Blender test helper**
+
+This is infrastructure only (no test of its own beyond being exercised by every
+later task's tests in this chunk and Chunk 3).
+
+```python
+# tests/python/blender_test_helpers.py
+"""Shared helper for tests that need to run code inside a real headless Blender
+process (any tools/assetgen/blender module that `import bpy`s).
+
+Pattern: write a small driver script to a temp file that imports the module
+under test, calls one of its functions, and writes `{"result": ...}` as the last
+line of stdout. `run_in_blender()` invokes `blender --background --python
+<driver>` and parses that last line as JSON. This mirrors the *shape* of the MCP
+`result = {...}` contract (see mcp_client.py) — every unit function under test
+returns a plain dict, never prints or uses global state — but the wire format is
+necessarily different: mcp_client.py talks to a long-running Blender process over
+a raw socket, while this helper launches a fresh headless `blender --background`
+process per test and can only observe it through stdout/exit code. So the
+convention shared across all three invokers (this test helper, build_character.py
+calling the same functions directly in-process, and the live MCP socket for
+iteration) is "unit functions return a plain JSON-serializable dict" — not an
+identical transport.
+"""
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+import uuid
+from pathlib import Path
+
+import pytest
+
+from tools.assetgen.blender import toolchain
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+# Repo-local scratch dir for generated driver scripts — gitignored, not the
+# system /tmp (this harness's driver scripts must stay under the repo/worktree
+# so they're inspectable and don't depend on a shared, environment-specific
+# temp filesystem). Reuses the same "artifacts/" gitignore entry as Chunk 1's
+# render-check scratch path.
+SCRATCH_DIR = REPO_ROOT / "artifacts" / "blender_test_drivers"
+
+
+def blender_available() -> bool:
+    try:
+        toolchain.check_blender_available()
+        return True
+    except (toolchain.BlenderNotFoundError, toolchain.BlenderVersionTooOldError):
+        return False
+
+
+requires_blender = pytest.mark.skipif(
+    not blender_available(), reason="blender executable not found or too old"
+)
+
+
+def run_in_blender(driver_code: str, timeout: float = 120) -> dict:
+    """Run `driver_code` inside headless Blender; return its parsed `result` dict.
+
+    `driver_code` must print exactly one line of the form `RESULT:<json>` before
+    exiting (see existing tasks in this chunk for the convention each module's
+    driver script follows).
+    """
+    SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
+    driver_path = SCRATCH_DIR / f"driver_{uuid.uuid4().hex}.py"
+    driver_path.write_text(driver_code)
+    try:
+        proc = subprocess.run(
+            ["blender", "--background", "--python", str(driver_path)],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=str(REPO_ROOT),
+        )
+    finally:
+        driver_path.unlink(missing_ok=True)
+
+    result_lines = [
+        line for line in proc.stdout.splitlines() if line.startswith("RESULT:")
+    ]
+    if not result_lines:
+        raise AssertionError(
+            "no RESULT: line in Blender stdout — "
+            f"stdout={proc.stdout!r} stderr={proc.stderr!r}"
+        )
+    return json.loads(result_lines[-1][len("RESULT:"):])
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add tools/assetgen/blender/archetype_spec.py tests/python/blender_test_helpers.py \
+        tests/python/test_archetype_spec.py
+git commit -m "Add ArchetypeSpec data contract and headless-Blender test helper"
+```
+
+---
+
+### Task 5: `blender/loader.py`
+
+**Files:**
+- Create: `tools/assetgen/blender/loader.py`
+- Test: `tests/python/test_blender_loader.py`
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_blender_loader.py
+from tests.python.blender_test_helpers import requires_blender, run_in_blender
+
+
+@requires_blender
+def test_load_base_asserts_expected_structure():
+    driver = '''
+import sys
+sys.path.insert(0, ".")
+from tools.assetgen.blender import loader
+
+info = loader.load_base()
+print("RESULT:" + __import__("json").dumps(info))
+'''
+    result = run_in_blender(driver)
+    assert result["mesh_object"] == "body"
+    assert result["armature_object"] == "Armature"
+    assert "Hips" in result["bone_names"]
+    assert "Spine" in result["bone_names"]
+
+
+@requires_blender
+def test_load_base_raises_on_missing_bone(tmp_path, monkeypatch):
+    # Uses a deliberately corrupted copy of base_humanoid.blend (Armature
+    # renamed) to prove load_base() fails loud rather than silently continuing.
+    driver = '''
+import sys
+sys.path.insert(0, ".")
+import bpy
+from tools.assetgen.blender import loader
+
+loader.load_base()
+bpy.data.armatures["Armature"].bones[0].name = "NotHips"
+try:
+    loader.assert_structure()
+    print("RESULT:" + __import__("json").dumps({"raised": False}))
+except loader.BaseAssetStructureError as exc:
+    print("RESULT:" + __import__("json").dumps({"raised": True, "message": str(exc)}))
+'''
+    result = run_in_blender(driver)
+    assert result["raised"] is True
+    assert "Hips" in result["message"]
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_blender_loader.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named 'tools.assetgen.blender.loader'`
+(or SKIPPED if Blender isn't installed in this environment — in that case, still
+write and commit the implementation; verification happens wherever Blender is
+available, per this chunk's shared skip policy above.)
+
+- [ ] **Step 3: Write the implementation**
+
+```python
+# tools/assetgen/blender/loader.py
+"""Loads base_humanoid.blend and asserts it has the structure every downstream
+unit (proportions/clothing/materials/animate) assumes. This is the guard
+against base_humanoid.blend drifting (re-authored, renamed) in a way that
+silently breaks everything built on top of it — see spec's "Malformed/drifted
+base asset" error-handling note.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+import bpy
+
+from .archetype_spec import KNOWN_BONES
+
+BASE_BLEND_PATH = Path(__file__).resolve().parent / "base_humanoid.blend"
+
+EXPECTED_MESH_OBJECT = "body"
+EXPECTED_ARMATURE_OBJECT = "Armature"
+
+
+class BaseAssetStructureError(RuntimeError):
+    pass
+
+
+def load_base(path: Path = BASE_BLEND_PATH) -> dict:
+    """Load base_humanoid.blend into the current Blender session, replacing
+    whatever scene is currently open, then assert its structure.
+
+    Returns assert_structure()'s summary dict (mesh_object, armature_object,
+    bone_names) so callers (tests, build_character.py) get the structure
+    summary directly from load_base() without a second call.
+    """
+    bpy.ops.wm.open_mainfile(filepath=str(path))
+    return assert_structure()
+
+
+def assert_structure() -> dict:
+    """Assert the loaded scene has the expected mesh/armature/bone names.
+
+    Returns a summary dict (mesh_object, armature_object, bone_names) on
+    success. Raises BaseAssetStructureError naming exactly what's wrong on
+    failure — no silent fallback, per the spec's error-handling section.
+    """
+    if EXPECTED_MESH_OBJECT not in bpy.data.objects:
+        raise BaseAssetStructureError(
+            f"expected mesh object '{EXPECTED_MESH_OBJECT}' not found; "
+            f"found objects: {sorted(o.name for o in bpy.data.objects)}"
+        )
+    if EXPECTED_ARMATURE_OBJECT not in bpy.data.objects:
+        raise BaseAssetStructureError(
+            f"expected armature object '{EXPECTED_ARMATURE_OBJECT}' not found; "
+            f"found objects: {sorted(o.name for o in bpy.data.objects)}"
+        )
+    armature_obj = bpy.data.objects[EXPECTED_ARMATURE_OBJECT]
+    actual_bones = {bone.name for bone in armature_obj.data.bones}
+    missing = KNOWN_BONES - actual_bones
+    if missing:
+        raise BaseAssetStructureError(
+            f"armature missing expected bone(s): {sorted(missing)}; "
+            f"found: {sorted(actual_bones)}"
+        )
+    return {
+        "mesh_object": EXPECTED_MESH_OBJECT,
+        "armature_object": EXPECTED_ARMATURE_OBJECT,
+        "bone_names": sorted(actual_bones),
+    }
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_blender_loader.py -v`
+Expected: PASS (2 tests), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/assetgen/blender/loader.py tests/python/test_blender_loader.py
+git commit -m "Add blender/loader.py: base asset load + structure assertions"
+```
+
+---
+
+### Task 6: `blender/proportions.py`
+
+**Files:**
+- Create: `tools/assetgen/blender/proportions.py`
+- Test: `tests/python/test_blender_proportions.py`
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_blender_proportions.py
+from tests.python.blender_test_helpers import requires_blender, run_in_blender
+
+
+@requires_blender
+def test_apply_proportions_scales_named_bones():
+    driver = '''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import loader, proportions
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+loader.load_base()
+spec = ArchetypeSpec(
+    name="villager",
+    bone_scales={"UpLeg.L": 0.9, "UpLeg.R": 0.9},
+    clothing=[],
+    palette={},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+info = proportions.apply(spec)
+print("RESULT:" + json.dumps(info))
+'''
+    result = run_in_blender(driver)
+    assert result["scaled_bones"] == {"UpLeg.L": 0.9, "UpLeg.R": 0.9}
+
+
+@requires_blender
+def test_apply_proportions_is_a_noop_for_unlisted_bones():
+    driver = '''
+import sys, json
+sys.path.insert(0, ".")
+import bpy
+from tools.assetgen.blender import loader, proportions
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+loader.load_base()
+armature_obj = bpy.data.objects["Armature"]
+before = armature_obj.pose.bones["Spine"].scale.to_tuple()
+
+spec = ArchetypeSpec(
+    name="villager", bone_scales={"UpLeg.L": 0.9}, clothing=[], palette={},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+proportions.apply(spec)
+after = armature_obj.pose.bones["Spine"].scale.to_tuple()
+print("RESULT:" + json.dumps({"before": before, "after": after}))
+'''
+    result = run_in_blender(driver)
+    assert result["before"] == result["after"]
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_blender_proportions.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named
+'tools.assetgen.blender.proportions'` (or SKIPPED without Blender)
+
+- [ ] **Step 3: Write the implementation**
+
+```python
+# tools/assetgen/blender/proportions.py
+"""Applies an ArchetypeSpec's bone_scales to the currently-loaded base armature.
+
+No clothing, no materials, no animation — see architecture table's
+responsibility split. Scaling is applied as pose-bone scale (not edit-mode bone
+length changes) so it composes cleanly with the auto-weighted mesh deformation
+already baked into base_humanoid.blend; it does not touch bones not listed in
+bone_scales (they keep scale (1, 1, 1)).
+
+Scope note: the spec's unit table describes this stage's input as "bone scale
+factors / shape-key values" — shape-key-driven proportion variation (e.g.
+smooth silhouette blends rather than rigid per-bone scaling) is intentionally
+deferred; ArchetypeSpec only carries bone_scales for now (see
+archetype_spec.py, Task 4). If bone scaling alone doesn't produce visually
+acceptable per-archetype variation during Wren/villager migration (Chunk 4),
+add shape-key support to ArchetypeSpec and this module then, rather than
+building it speculatively now.
+"""
+from __future__ import annotations
+
+import bpy
+
+from .archetype_spec import ArchetypeSpec
+
+
+def apply(spec: ArchetypeSpec) -> dict:
+    """Scale each named bone in spec.bone_scales; leave all others untouched.
+
+    Returns {"scaled_bones": {bone_name: factor, ...}} for test/log inspection.
+    """
+    armature_obj = bpy.data.objects["Armature"]
+    bpy.context.view_layer.objects.active = armature_obj
+    bpy.ops.object.mode_set(mode="POSE")
+    for bone_name, factor in spec.bone_scales.items():
+        pose_bone = armature_obj.pose.bones[bone_name]
+        pose_bone.scale = (factor, factor, factor)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return {"scaled_bones": dict(spec.bone_scales)}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_blender_proportions.py -v`
+Expected: PASS (2 tests), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/assetgen/blender/proportions.py tests/python/test_blender_proportions.py
+git commit -m "Add blender/proportions.py: per-archetype bone scaling"
+```
+
+---
+
+### Task 7: `blender/clothing.py`
+
+**Files:**
+- Create: `tools/assetgen/blender/clothing.py`
+- Create: `tools/assetgen/blender/clothing_parts/__init__.py`
+- Create: `tools/assetgen/blender/clothing_parts/tunic.py`
+- Create: `tools/assetgen/blender/clothing_parts/boots.py`
+- Test: `tests/python/test_blender_clothing.py`
+
+**Design note carried from the spec:** "Each clothing piece is its own small
+authored mesh (same bevel+subsurf treatment), not part of the base body mesh."
+`clothing_parts/` holds one small script-module per piece (mirrors the base
+mesh's per-part construction style from Task 3), each exposing a single
+`build() -> bpy.types.Object` function that returns an unparented mesh object
+positioned in the base armature's rest pose space. `clothing.py` itself is the
+generic add-and-bind orchestrator; it does not know how to build any specific
+piece — that keeps clothing.py from growing without bound as more pieces are
+added later (new pieces are new files under clothing_parts/, not new branches
+inside clothing.py).
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_blender_clothing.py
+from tests.python.blender_test_helpers import requires_blender, run_in_blender
+
+
+@requires_blender
+def test_apply_clothing_adds_and_parents_pieces():
+    driver = '''
+import sys, json
+sys.path.insert(0, ".")
+import bpy
+from tools.assetgen.blender import loader, clothing
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+loader.load_base()
+spec = ArchetypeSpec(
+    name="villager", bone_scales={}, clothing=["tunic", "boots"],
+    palette={"tunic": ("wood", 1), "boots": ("bark", 0)},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+info = clothing.apply(spec)
+armature = bpy.data.objects["Armature"]
+parented_ok = all(
+    obj.parent == armature and obj.parent_type == "ARMATURE"
+    for obj in bpy.data.objects
+    if obj.name in info["added_objects"]
+)
+print("RESULT:" + json.dumps({**info, "parented_ok": parented_ok}))
+'''
+    result = run_in_blender(driver)
+    assert set(result["added_objects"]) == {"tunic", "boots"}
+    assert result["parented_ok"] is True
+
+
+@requires_blender
+def test_apply_clothing_raises_on_unknown_piece():
+    driver = '''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import loader, clothing
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+loader.load_base()
+spec = ArchetypeSpec(
+    name="villager", bone_scales={}, clothing=["not_a_real_piece"],
+    palette={"not_a_real_piece": ("wood", 1)},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+try:
+    clothing.apply(spec)
+    print("RESULT:" + json.dumps({"raised": False}))
+except clothing.UnknownClothingPieceError as exc:
+    print("RESULT:" + json.dumps({"raised": True, "message": str(exc)}))
+'''
+    result = run_in_blender(driver)
+    assert result["raised"] is True
+    assert "not_a_real_piece" in result["message"]
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_blender_clothing.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named
+'tools.assetgen.blender.clothing'` (or SKIPPED without Blender)
+
+- [ ] **Step 3: Write the clothing part scripts**
+
+```python
+# tools/assetgen/blender/clothing_parts/__init__.py
+"""One module per clothing/hair piece. Each exposes build() -> bpy.types.Object,
+registered in clothing.py's PART_BUILDERS map below (Step 4)."""
+```
+
+```python
+# tools/assetgen/blender/clothing_parts/tunic.py
+"""Builds the 'tunic' clothing piece: a simple beveled+subsurfed torso wrap,
+sized to sit just outside the base body mesh's torso silhouette so it reads as
+a garment rather than a re-skinned body part."""
+from __future__ import annotations
+
+import bpy
+import bmesh
+
+from ..body_dims import DIMS
+
+# Small outward margin so the tunic reads as a garment layered over the body
+# mesh, not a re-skinned duplicate of the torso.
+_MARGIN = 0.02
+
+
+def build() -> bpy.types.Object:
+    mesh = bpy.data.meshes.new("tunic_mesh")
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.scale(
+        bm,
+        vec=(
+            DIMS["torso_width"] / 2 + _MARGIN,
+            (DIMS["torso_width"] * 0.7) / 2 + _MARGIN,
+            DIMS["torso_height"] / 2 + _MARGIN,
+        ),
+        verts=bm.verts,
+    )
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new("tunic", mesh)
+    bpy.context.collection.objects.link(obj)
+    # torso midpoint height: legs (upper+lower) + half the torso height, all
+    # from body_dims.DIMS — matches wherever author_base_humanoid.py placed
+    # the torso, rather than a separately hand-tuned number.
+    obj.location = (
+        0.0,
+        0.0,
+        DIMS["upper_leg_length"] + DIMS["lower_leg_length"] + DIMS["torso_height"] / 2,
+    )
+
+    bevel = obj.modifiers.new("Bevel", "BEVEL")
+    bevel.width = DIMS["bevel_width"]
+    bevel.segments = DIMS["bevel_segments"]
+    subsurf = obj.modifiers.new("Subsurf", "SUBSURF")
+    subsurf.levels = DIMS["subsurf_levels"]
+    return obj
+```
+
+```python
+# tools/assetgen/blender/clothing_parts/boots.py
+"""Builds the 'boots' clothing piece: a pair of simple beveled+subsurfed foot
+coverings, one per side (Mirror modifier, matching the ".L"/".R" convention
+fixed in Chunk 1 Task 3 step 6), joined into a single 'boots' object."""
+from __future__ import annotations
+
+import bpy
+import bmesh
+
+from ..body_dims import DIMS
+
+
+def build() -> bpy.types.Object:
+    mesh = bpy.data.meshes.new("boots_mesh")
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.scale(
+        bm,
+        vec=(
+            DIMS["foot_length"] / 2,
+            DIMS["hip_width"] / 2,
+            DIMS["foot_length"] / 3,
+        ),
+        verts=bm.verts,
+    )
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new("boots", mesh)
+    bpy.context.collection.objects.link(obj)
+    # Offset to one side (hip_width/2) so the Mirror modifier produces the
+    # other boot at -hip_width/2; height is half the foot's own thickness,
+    # i.e. resting on the ground plane.
+    obj.location = (DIMS["hip_width"] / 2, 0.0, DIMS["foot_length"] / 6)
+
+    mirror = obj.modifiers.new("Mirror", "MIRROR")
+    mirror.use_axis = (True, False, False)
+    bevel = obj.modifiers.new("Bevel", "BEVEL")
+    bevel.width = DIMS["bevel_width"]
+    bevel.segments = DIMS["bevel_segments"]
+    subsurf = obj.modifiers.new("Subsurf", "SUBSURF")
+    subsurf.levels = DIMS["subsurf_levels"]
+    return obj
+```
+
+- [ ] **Step 4: Write `clothing.py`**
+
+```python
+# tools/assetgen/blender/clothing.py
+"""Adds and binds clothing/hair geometry to the loaded base armature, per an
+ArchetypeSpec's `clothing` list. Delegates the actual mesh-building for each
+named piece to tools/assetgen/blender/clothing_parts/<piece>.py — this module
+only knows how to look a piece up, build it, apply the same bevel+subsurf
+authoring style check, and bind it to the armature. Adding a new piece means
+adding a new clothing_parts/ file and one PART_BUILDERS entry, not editing the
+add/bind logic here.
+"""
+from __future__ import annotations
+
+import bpy
+
+from .archetype_spec import ArchetypeSpec
+from .clothing_parts import boots, tunic
+
+PART_BUILDERS = {
+    "tunic": tunic.build,
+    "boots": boots.build,
+}
+
+
+class UnknownClothingPieceError(RuntimeError):
+    pass
+
+
+def apply(spec: ArchetypeSpec) -> dict:
+    """Build and bind every clothing piece named in spec.clothing.
+
+    Returns {"added_objects": [name, ...]}. Raises UnknownClothingPieceError
+    naming the piece if spec.clothing references something not in
+    PART_BUILDERS (ArchetypeSpec itself only validates palette entries exist,
+    not that the piece is buildable — that's this module's job).
+    """
+    armature_obj = bpy.data.objects["Armature"]
+    added = []
+    for piece in spec.clothing:
+        if piece not in PART_BUILDERS:
+            raise UnknownClothingPieceError(
+                f"no clothing_parts builder registered for {piece!r}; "
+                f"known pieces: {sorted(PART_BUILDERS)}"
+            )
+        obj = PART_BUILDERS[piece]()
+        # Automatic weights so clothing deforms with the same pose as the
+        # body mesh it's layered over (same mechanism as the base mesh's own
+        # binding in author_base_humanoid.py Step 7). parent_set(type=
+        # 'ARMATURE_AUTO') sets both obj.parent and obj.parent_type itself —
+        # do not pre-assign them, the operator needs the mesh selected (not
+        # yet parented) and the armature selected+active to compute weights
+        # against the correct source pose.
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        armature_obj.select_set(True)
+        bpy.context.view_layer.objects.active = armature_obj
+        bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+        added.append(obj.name)
+    return {"added_objects": added}
+```
+
+- [ ] **Step 5: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_blender_clothing.py -v`
+Expected: PASS (2 tests), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add tools/assetgen/blender/clothing.py tools/assetgen/blender/clothing_parts/ \
+        tests/python/test_blender_clothing.py
+git commit -m "Add blender/clothing.py: per-archetype clothing add+bind"
+```
+
+---
+
+### Task 8: `blender/materials.py`
+
+**Files:**
+- Create: `tools/assetgen/blender/materials.py`
+- Test: `tests/python/test_blender_materials.py`
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_blender_materials.py
+from tests.python.blender_test_helpers import requires_blender, run_in_blender
+
+# Shared setup snippet: materials.py samples assets/generated/palette_main.png,
+# which build.py normally generates before invoking the Blender build (see
+# Chunk 3's build_character.py orchestration). These tests write it themselves
+# so this chunk's tests don't depend on running build.py first.
+_WRITE_PALETTE_PNG = '''
+from pathlib import Path
+from tools.assetgen import palette
+png_path = Path("assets/generated/palette_main.png")
+png_path.parent.mkdir(parents=True, exist_ok=True)
+png_path.write_bytes(palette.build_palette_png())
+'''
+
+
+@requires_blender
+def test_apply_materials_assigns_palette_cells():
+    driver = _WRITE_PALETTE_PNG + '''
+import sys, json
+sys.path.insert(0, ".")
+import bpy
+from tools.assetgen.blender import loader, clothing, materials
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+loader.load_base()
+spec = ArchetypeSpec(
+    name="villager", bone_scales={}, clothing=["tunic"],
+    palette={"tunic": ("wood", 1)},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+clothing.apply(spec)
+info = materials.apply(spec)
+tunic_obj = bpy.data.objects["tunic"]
+uv_layer = tunic_obj.data.uv_layers.active
+all_same_point = len({tuple(round(c, 6) for c in loop.uv) for loop in uv_layer.data}) == 1
+has_material = len(tunic_obj.data.materials) == 1 and tunic_obj.data.materials[0] is not None
+print("RESULT:" + json.dumps({**info, "all_same_point": all_same_point, "has_material": has_material}))
+'''
+    result = run_in_blender(driver)
+    assert result["assigned"] == {"tunic": ["wood", 1]}
+    assert result["all_same_point"] is True
+    assert result["has_material"] is True
+
+
+@requires_blender
+def test_apply_materials_raises_on_unknown_ramp():
+    driver = _WRITE_PALETTE_PNG + '''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import loader, clothing, materials
+from tools.assetgen.blender.archetype_spec import ArchetypeSpec
+
+loader.load_base()
+spec = ArchetypeSpec(
+    name="villager", bone_scales={}, clothing=["tunic"],
+    palette={"tunic": ("not_a_real_ramp", 0)},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+clothing.apply(spec)
+try:
+    materials.apply(spec)
+    print("RESULT:" + json.dumps({"raised": False}))
+except KeyError as exc:
+    print("RESULT:" + json.dumps({"raised": True, "message": str(exc)}))
+'''
+    result = run_in_blender(driver)
+    assert result["raised"] is True
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_blender_materials.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named
+'tools.assetgen.blender.materials'` (or SKIPPED without Blender)
+
+- [ ] **Step 3: Write the implementation**
+
+```python
+# tools/assetgen/blender/materials.py
+"""Maps ArchetypeSpec.palette cell assignments onto each named object: every UV
+coordinate is set to a single palette-cell center point (matching v1's
+tools/assetgen/mesh.py MeshBuilder.add_face contract exactly — a flat-color
+face samples one point, no gradient), and the object's material samples
+assets/generated/palette_main.png (the same atlas PNG build.py already
+generates via tools/assetgen/palette.build_palette_png() — see build.py's
+existing palette-generation step). No new texture painting; this only wires up
+the existing atlas.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+import bpy
+
+from .. import palette
+from .archetype_spec import ArchetypeSpec
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PALETTE_PNG_PATH = REPO_ROOT / "assets" / "generated" / "palette_main.png"
+_SHARED_MATERIAL_NAME = "palette_atlas"
+
+
+def _get_shared_material() -> bpy.types.Material:
+    """One material shared by every object across every archetype build — they
+    all sample the same atlas texture, differing only by UV coordinate, so a
+    single material avoids creating one per (ramp, shade) combination."""
+    material = bpy.data.materials.get(_SHARED_MATERIAL_NAME)
+    if material is not None:
+        return material
+    if not PALETTE_PNG_PATH.exists():
+        raise FileNotFoundError(
+            f"{PALETTE_PNG_PATH} not found — build.py must generate "
+            "assets/generated/palette_main.png (tools.assetgen.palette."
+            "build_palette_png()) before running the Blender character build."
+        )
+    material = bpy.data.materials.new(_SHARED_MATERIAL_NAME)
+    material.use_nodes = True
+    bsdf = material.node_tree.nodes["Principled BSDF"]
+    tex_node = material.node_tree.nodes.new("ShaderNodeTexImage")
+    tex_node.image = bpy.data.images.load(str(PALETTE_PNG_PATH))
+    tex_node.interpolation = "Closest"  # flat color cells: no bilinear bleed
+    material.node_tree.links.new(tex_node.outputs["Color"], bsdf.inputs["Base Color"])
+    return material
+
+
+def _set_flat_uv(obj: bpy.types.Object, uv: tuple[float, float]) -> None:
+    uv_layer = obj.data.uv_layers.active or obj.data.uv_layers.new()
+    for loop in uv_layer.data:
+        loop.uv = uv
+
+
+def apply(spec: ArchetypeSpec) -> dict:
+    """Assign each spec.palette[object_name] = (ramp, shade) cell to that
+    object: every UV coordinate becomes the cell's single center point, and
+    the object's material is set to the shared palette_atlas material.
+
+    Returns {"assigned": {object_name: [ramp, shade], ...}}. Validates every
+    (ramp, shade) pair up front (raising KeyError/ValueError from
+    palette.cell_uv, unwrapped, on the first invalid one) before touching any
+    Blender object state, so a bad archetype spec never leaves a half-applied
+    scene.
+    """
+    uvs = {
+        obj_name: palette.cell_uv(ramp, shade)
+        for obj_name, (ramp, shade) in spec.palette.items()
+    }
+    material = _get_shared_material()
+    assigned = {}
+    for obj_name, (ramp, shade) in spec.palette.items():
+        obj = bpy.data.objects[obj_name]
+        _set_flat_uv(obj, uvs[obj_name])
+        if obj.data.materials:
+            obj.data.materials[0] = material
+        else:
+            obj.data.materials.append(material)
+        assigned[obj_name] = [ramp, shade]
+    return {"assigned": assigned}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_blender_materials.py -v`
+Expected: PASS (2 tests), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/assetgen/blender/materials.py tests/python/test_blender_materials.py
+git commit -m "Add blender/materials.py: palette-cell UV/material assignment"
 ```
