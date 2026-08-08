@@ -29,3 +29,5 @@ reports/
 
 # look-dev / CI screenshot output
 artifacts/
+
+.superpowers/
