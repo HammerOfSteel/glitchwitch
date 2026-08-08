@@ -20,16 +20,37 @@ from . import (
     props,
     rig_contract,
 )
-from .character_spec import SPEC_SCHEMA_VERSION
+from .character_spec import SPEC_SCHEMA_VERSION, CharacterSpec
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO_ROOT / "assets" / "generated"
+
+# A second archetype, generated purely to prove the pipeline is genuinely
+# data-driven (see docs/superpowers/plans/2026-08-08-character-procedural-pipeline.md,
+# Task 8). Not yet a named story-bible NPC — seed 1 just needs to differ from
+# Wren's seed 0 so this is visibly a distinct instance.
+VILLAGER_SPEC = CharacterSpec(archetype="villager", seed=1, root_name="villager")
 
 
 def _walk_nodes(node):
     yield node
     for child in node.children:
         yield from _walk_nodes(child)
+
+
+def _character_manifest_entry(spec, rig, clips, glb: bytes) -> dict:
+    return {
+        "archetype": spec.archetype,
+        "seed": spec.seed,
+        "resolved_parts": character_gen.resolved_parts_for(spec),
+        "spec_schema_version": SPEC_SCHEMA_VERSION,
+        "rig_contract_version": rig_contract.VERSION,
+        "animation_contract_version": animation_contract.VERSION,
+        "tris": sum(node.mesh.tri_count for node in _walk_nodes(rig) if node.mesh),
+        "bytes": len(glb),
+        "sha256": hashlib.sha256(glb).hexdigest(),
+        "clips": [clip.name for clip in clips],
+    }
 
 
 def build_all() -> dict:
@@ -59,19 +80,17 @@ def build_all() -> dict:
     character_validate.validate(wren_rig, wren_clips, tri_budget=character.TRI_BUDGET)
     wren_glb = gltf.build_scene_glb(wren_rig, wren_clips, "wren")
     (OUT_DIR / "wren.glb").write_bytes(wren_glb)
-    resolved_parts = character_gen.resolved_parts_for(character.WREN_SPEC)
-    manifest["characters"]["wren"] = {
-        "archetype": character.WREN_SPEC.archetype,
-        "seed": character.WREN_SPEC.seed,
-        "resolved_parts": resolved_parts,
-        "spec_schema_version": SPEC_SCHEMA_VERSION,
-        "rig_contract_version": rig_contract.VERSION,
-        "animation_contract_version": animation_contract.VERSION,
-        "tris": sum(node.mesh.tri_count for node in _walk_nodes(wren_rig) if node.mesh),
-        "bytes": len(wren_glb),
-        "sha256": hashlib.sha256(wren_glb).hexdigest(),
-        "clips": [clip.name for clip in wren_clips],
-    }
+    manifest["characters"]["wren"] = _character_manifest_entry(
+        character.WREN_SPEC, wren_rig, wren_clips, wren_glb,
+    )
+
+    villager_rig, villager_clips = character_gen.generate(VILLAGER_SPEC)
+    character_validate.validate(villager_rig, villager_clips)
+    villager_glb = gltf.build_scene_glb(villager_rig, villager_clips, "villager")
+    (OUT_DIR / "villager.glb").write_bytes(villager_glb)
+    manifest["characters"]["villager"] = _character_manifest_entry(
+        VILLAGER_SPEC, villager_rig, villager_clips, villager_glb,
+    )
 
     manifest_bytes = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
     (OUT_DIR / "manifest.json").write_bytes(manifest_bytes + b"\n")

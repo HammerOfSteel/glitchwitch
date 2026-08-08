@@ -42,3 +42,23 @@ def test_villager_headwear_and_hair_are_empty_placeholders():
     braid = find(rig, "braid")
     assert hat is not None and hat.mesh is None
     assert braid is not None and braid.mesh is None
+
+
+def test_villager_hips_has_leg_geometry():
+    """The hips slot must NOT be an empty placeholder: without leg geometry
+    bridging the gap between the boots and the torso, the villager reads as
+    disconnected floating parts rather than a person (regression check)."""
+    rig, _clips = character_gen.generate(_villager_spec())
+
+    def find(node, name):
+        if node.name == name:
+            return node
+        for child in node.children:
+            found = find(child, name)
+            if found:
+                return found
+        return None
+
+    hips = find(rig, "hips")
+    assert hips is not None and hips.mesh is not None
+    assert hips.mesh.tri_count > 0

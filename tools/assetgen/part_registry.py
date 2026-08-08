@@ -77,27 +77,45 @@ def empty_placeholder() -> MeshBuilder:
     return MeshBuilder()
 
 
+def villager_hips() -> MeshBuilder:
+    """Simple trousers — two leg cylinders bridging the gap between the
+    torso and boots. (The witch's equivalent slot is a long skirt lathe;
+    villagers get plain legs instead, matching "plainer" per the spec.)"""
+    builder = MeshBuilder()
+    for x in (-0.075, 0.075):
+        add_cylinder(builder, (x, -0.14, 0.0), 0.075, 0.40, 8, "bark", 1, cap_top=False)
+    return builder
+
+
 def villager_torso() -> MeshBuilder:
     builder = MeshBuilder()
-    add_box(builder, (0.0, 0.05, 0.0), (0.28, 0.32, 0.22), "moss", 2)
+    profile = [(0.15, -0.10), (0.17, 0.0), (0.15, 0.08), (0.12, 0.16)]
+    add_lathe(builder, profile, 10, "leaf", 2, cap_start=True, cap_end=True)
     return builder
 
 
 def villager_head() -> MeshBuilder:
     builder = MeshBuilder()
-    add_box(builder, (0.0, 0.0, 0.0), (0.24, 0.24, 0.22), "cream", 3)
+    profile = [
+        (0.0, -0.04), (0.095, -0.03), (0.125, 0.04), (0.115, 0.11), (0.07, 0.17), (0.0, 0.19),
+    ]
+    add_lathe(builder, profile, 10, "clay", 2)
+    # eyes on the -Z face (forward)
+    for x in (-0.045, 0.045):
+        add_box(builder, (x, 0.05, -0.125), (0.02, 0.026, 0.012), "bark", 0)
     return builder
 
 
 def villager_arm() -> MeshBuilder:
     builder = MeshBuilder()
-    add_box(builder, (0.0, -0.12, 0.0), (0.07, 0.22, 0.07), "moss", 1)
+    add_box(builder, (0.0, -0.11, 0.0), (0.065, 0.20, 0.065), "leaf", 1)
+    add_box(builder, (0.0, -0.23, 0.0), (0.05, 0.05, 0.05), "clay", 2)
     return builder
 
 
 def villager_boot() -> MeshBuilder:
     builder = MeshBuilder()
-    add_box(builder, (0.0, 0.0, -0.01), (0.09, 0.10, 0.14), "bark", 1)
+    add_box(builder, (0.0, 0.0, -0.01), (0.09, 0.10, 0.14), "bark", 1, top=("bark", 2))
     return builder
 
 
@@ -115,7 +133,7 @@ _REGISTRY = {
         "boot": {"witch_boot": witch_boot},
     },
     "villager": {
-        "hips": {"villager_hips_placeholder": empty_placeholder},
+        "hips": {"villager_hips": villager_hips},
         "torso": {"villager_torso": villager_torso},
         "arm": {"villager_arm": villager_arm},
         "head": {"villager_head": villager_head},
