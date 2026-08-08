@@ -2766,13 +2766,853 @@ git commit -m "Wire generic Blender character build path into build.py"
 
 ---
 
-## Chunk 5 (not yet written): Wren/villager migration
+## Chunk 5: Wren/villager migration
 
 Per the spec's "Migration of Wren and the villager" section, this final chunk
-covers: rebuilding Wren (base pipeline first with placeholder clothing as one
-checkpoint, then her redesigned bohemian outfit as a separable follow-up
-checkpoint), rebuilding the villager as the second archetype on the shared base,
-in-Godot verification (`AnimationPlayer.get_animation_list()` matches exactly,
-`character_gallery.tscn` still works), removing the old witch/villager entries from
-`tools/assetgen/part_registry.py`, and updating `tools/assetgen/README.md` /
-`docs/asset-inventory.md`. Not drafted yet — see this plan's next step.
+rebuilds Wren and the villager on the new Blender base, verifies the result
+in-Godot, and retires the old per-character generation path. It's split into
+six tasks so each is independently reviewable: Wren's base pipeline with
+placeholder clothing (Task 14), Wren's redesigned bohemian outfit as a
+separable follow-up (Task 15, per the spec's explicit "track them as separable
+checkpoints" instruction), the villager on the shared base (Task 16), the
+`build.py` swap-over + old registry cleanup (Task 17), in-Godot verification
+(Task 18), and docs updates (Task 19).
+
+**What does NOT change:** `gltf.py` stays in the repo untouched — `props.py` uses
+its `build_glb()` for non-character props, and this chunk does not touch that
+path. Wren's Runbook, jar companion, and chalk sigils (the props that keep her
+"recognizably a witch" per the redesign) are existing `tools/assetgen/props.py`
+props, unaffected by this migration — this chunk is only about her body/clothing/
+rig. Everything else in the v1 character-specific stack (`character.py`,
+`character_spec.py`, `character_gen.py`, `character_validate.py`,
+`animation_contract.py`, `rig_contract.py`, `part_registry.py`) is used *only*
+for character generation, has no other callers once `build.py` is repointed, and
+is deleted outright in Task 17 — not left as unused dead code.
+
+**Deviation from the spec's exact wording:** the design spec's "Migration"
+section says `character_gen.py`/`part_registry.py`/`gltf.py` "stay in the repo
+(still used for props)." Verified against the actual current repo while
+planning this chunk: `tools/assetgen/props.py` only imports
+`tools.assetgen.mesh`, never `part_registry` or `character_gen` — so that
+assumption doesn't hold for this codebase as it exists today. `gltf.py` is the
+one module of the three actually shared with props (via `build_glb()`), so it
+alone stays; `part_registry.py`/`character_gen.py` (and their exclusively
+character-only siblings) are deleted per Task 17's scope note above.
+
+### Task 14: Wren archetype — base pipeline, placeholder clothing
+
+**Files:**
+- Modify: `tools/assetgen/palette.py` (add `cloth`/`leather` ramps — verified
+  against the actual current file: neither exists yet, only material-agnostic
+  names like `wood`/`bark`/`stone`)
+- Create: `tools/assetgen/blender/archetypes/__init__.py` (empty — makes
+  `archetypes` a package)
+- Create: `tools/assetgen/blender/archetypes/wren.py` (the `ArchetypeSpec` instance
+  and its palette; one file per real archetype instance, distinct from the
+  `clothing_parts/` mesh builders, so migrating/redesigning an archetype never
+  means editing shared pipeline code)
+- Test: `tests/python/test_wren_archetype.py`
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_wren_archetype.py
+from tests.python.blender_test_helpers import (
+    requires_blender,
+    run_in_blender,
+    scratch_output_path,
+)
+
+
+@requires_blender
+def test_wren_base_pipeline_builds_and_validates():
+    out_path = scratch_output_path(".glb")
+    driver = f'''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import build_character
+from tools.assetgen.blender.archetypes.wren import WREN_SPEC
+
+info = build_character.build(WREN_SPEC, r"{out_path}")
+print("RESULT:" + json.dumps(info))
+'''
+    try:
+        result = run_in_blender(driver)
+        assert result["ok"] is True, result["errors"]
+        assert out_path.exists()
+    finally:
+        out_path.unlink(missing_ok=True)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_wren_archetype.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named
+'tools.assetgen.blender.archetypes'` (or SKIPPED without Blender)
+
+- [ ] **Step 3: Add `cloth`/`leather` ramps to `palette.py`**
+
+```python
+# tools/assetgen/palette.py (modify — append two rows to the existing RAMPS
+# list; per the file's own "adding new ramps APPENDS rows" rule, never reorder
+# or edit existing entries)
+RAMPS = [
+    # ... existing 17 entries unchanged ...
+    ("cloth", ["6b5a4a", "8a7460", "a89078", "c2ac94"]),
+    ("leather", ["4a3123", "654431", "805740", "9c6f52"]),
+]
+```
+
+- [ ] **Step 4: Write `archetypes/wren.py` (placeholder clothing)**
+
+Reuses Chunk 2's `tunic`/`boots` clothing pieces as a deliberate placeholder —
+this checkpoint exists to prove Wren builds/validates on the new base at all,
+*before* Task 15 spends effort on her redesigned outfit specifically.
+
+```python
+# tools/assetgen/blender/archetypes/__init__.py
+```
+
+```python
+# tools/assetgen/blender/archetypes/wren.py
+"""Wren's ArchetypeSpec. This file is the only thing that changes when Wren's
+proportions/clothing/palette are revised — the pipeline units (loader,
+proportions, clothing, materials, animate, export, validate) never reference
+"wren" by name.
+
+Checkpoint 1 (this task): placeholder clothing (tunic/boots, reused from
+Chunk 2) — proves the base pipeline produces a valid Wren-sized character.
+Checkpoint 2 (Task 15): swaps `clothing`/`palette` below to her redesigned
+bohemian outfit (jumper + shorts) once those pieces exist. Nothing outside
+this file needs to change between the two checkpoints.
+"""
+from __future__ import annotations
+
+from ..archetype_spec import ArchetypeSpec
+
+WREN_SPEC = ArchetypeSpec(
+    name="wren",
+    bone_scales={},  # Wren uses the base proportions unscaled for now; revisit
+                     # if her redesigned outfit (Task 15) reveals a silhouette
+                     # issue the clothing pieces alone can't fix.
+    clothing=["tunic", "boots"],
+    palette={"tunic": ("cloth", 2), "boots": ("leather", 0)},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+```
+
+- [ ] **Step 5: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_wren_archetype.py -v`
+Expected: PASS (1 test), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add tools/assetgen/palette.py tools/assetgen/blender/archetypes/ \
+        tests/python/test_wren_archetype.py
+git commit -m "Add Wren's v2 ArchetypeSpec (checkpoint 1: placeholder clothing)"
+```
+
+---
+
+### Task 15: Wren's redesigned bohemian outfit
+
+**Files:**
+- Modify: `tools/assetgen/blender/body_dims.py` (add the `leg_radius` key)
+- Create: `tools/assetgen/blender/clothing_parts/jumper.py`
+- Create: `tools/assetgen/blender/clothing_parts/shorts.py`
+- Modify: `tools/assetgen/blender/clothing.py` (register the two new pieces)
+- Modify: `tools/assetgen/palette.py` (add `wool`/`denim` ramps — verified against
+  the actual current file: neither ramp name exists there yet)
+- Modify: `tools/assetgen/blender/archetypes/wren.py` (swap to the new outfit)
+- Test: `tests/python/test_wren_archetype.py` (extend)
+
+**Design intent (from the spec):** move Wren from "pointy hat + robe" costume
+cliché to a modern, relaxed, bohemian look — denim shorts, a woolen jumper,
+layered casual fit — while she stays recognizably a witch through her *props*
+(Runbook, jar companion, chalk sigils — all existing, unaffected by this task),
+not her costume. No hat, no robe, no braid-as-costume-signifier: this task
+removes `witch_hat`/`witch_braid`-equivalent silhouette cues entirely from her
+clothing list (her hair is still present, just not built as a costume prop).
+
+- [ ] **Step 1: Extend the failing test**
+
+```python
+# tests/python/test_wren_archetype.py (add below the existing test, extend the
+# module-level import to add WREN_SPEC alongside the existing helpers)
+from tools.assetgen.blender.archetypes.wren import WREN_SPEC
+
+
+@requires_blender
+def test_wren_bohemian_outfit_builds_and_validates():
+    out_path = scratch_output_path(".glb")
+    driver = f'''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import build_character
+from tools.assetgen.blender.archetypes.wren import WREN_SPEC
+
+info = build_character.build(WREN_SPEC, r"{out_path}")
+print("RESULT:" + json.dumps(info))
+'''
+    try:
+        result = run_in_blender(driver)
+        assert result["ok"] is True, result["errors"]
+    finally:
+        out_path.unlink(missing_ok=True)
+    assert WREN_SPEC.clothing == ["jumper", "shorts", "boots"]
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_wren_archetype.py -v`
+Expected: FAIL — `jumper`/`shorts` not yet registered in `clothing.py`'s
+`PART_BUILDERS`, and `WREN_SPEC.clothing` still `["tunic", "boots"]`.
+
+- [ ] **Step 3: Add the missing `leg_radius` key to `body_dims.py`**
+
+`shorts.py` (Step 4 below) needs a leg-thickness dimension that `DIMS` (Chunk 1,
+Task 3) doesn't currently define — `boots.py` sized itself off `foot_length`/
+`hip_width` alone and never needed one. Add it explicitly rather than
+hardcoding a new number inside `shorts.py`:
+
+```python
+# tools/assetgen/blender/body_dims.py (modify — add one key to the existing
+# DIMS dict, do not redefine the dict)
+DIMS = {
+    # ... existing keys unchanged ...
+    "leg_radius": 0.045,  # cross-section radius of the upper leg at the hip;
+                          # used by shorts.py to size above-the-knee coverage
+                          # without clipping through the leg mesh
+}
+```
+
+- [ ] **Step 4: Write `jumper.py` and `shorts.py`**
+
+Same authoring style as Chunk 2's `tunic.py`/`boots.py` (a beveled+subsurfed
+primitive sized off `body_dims.DIMS` with a small outward margin) — a jumper is a
+looser torso wrap than the tunic (bigger margin, no waist taper); shorts are an
+above-the-knee leg covering built the same way `boots.py` builds its pair: one
+side-offset cube plus a Mirror modifier (`use_axis=(True, False, False)`) that
+generates the other leg automatically, not two separately-built objects joined
+together.
+
+```python
+# tools/assetgen/blender/clothing_parts/jumper.py
+"""Builds the 'jumper' clothing piece: Wren's redesigned woolen jumper — a
+looser, boxier torso wrap than Chunk 2's 'tunic' (bigger outward margin, no
+waist taper), replacing her old robe silhouette."""
+from __future__ import annotations
+
+import bpy
+import bmesh
+
+from ..body_dims import DIMS
+
+# Looser than tunic.py's _MARGIN (0.02) — a jumper reads as bulkier knitwear,
+# not a fitted garment.
+_MARGIN = 0.05
+
+
+def build() -> bpy.types.Object:
+    mesh = bpy.data.meshes.new("jumper_mesh")
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.scale(
+        bm,
+        vec=(
+            DIMS["torso_width"] / 2 + _MARGIN,
+            (DIMS["torso_width"] * 0.7) / 2 + _MARGIN,
+            DIMS["torso_height"] / 2 + _MARGIN,
+        ),
+        verts=bm.verts,
+    )
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new("jumper", mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.location = (
+        0.0,
+        0.0,
+        DIMS["upper_leg_length"] + DIMS["lower_leg_length"] + DIMS["torso_height"] / 2,
+    )
+
+    bevel = obj.modifiers.new("Bevel", "BEVEL")
+    bevel.width = DIMS["bevel_width"]
+    bevel.segments = DIMS["bevel_segments"]
+    subsurf = obj.modifiers.new("Subsurf", "SUBSURF")
+    subsurf.levels = DIMS["subsurf_levels"]
+    return obj
+```
+
+```python
+# tools/assetgen/blender/clothing_parts/shorts.py
+"""Builds the 'shorts' clothing piece: above-the-knee denim shorts. Follows
+boots.py's exact pattern (Chunk 2) — one side-offset primitive plus a Mirror
+modifier generates the other leg, rather than building/joining two separate
+objects. Replaces Wren's old full-length skirt silhouette."""
+from __future__ import annotations
+
+import bpy
+import bmesh
+
+from ..body_dims import DIMS
+
+_LEG_MARGIN = 0.03
+_SHORTS_LENGTH_FRACTION = 0.45  # covers the upper ~45% of the upper leg;
+                                # above-the-knee per the redesign brief
+
+
+def build() -> bpy.types.Object:
+    mesh = bpy.data.meshes.new("shorts_mesh")
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    length = DIMS["upper_leg_length"] * _SHORTS_LENGTH_FRACTION
+    bmesh.ops.scale(
+        bm,
+        vec=(
+            DIMS["leg_radius"] + _LEG_MARGIN,
+            DIMS["leg_radius"] + _LEG_MARGIN,
+            length / 2,
+        ),
+        verts=bm.verts,
+    )
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new("shorts", mesh)
+    bpy.context.collection.objects.link(obj)
+    # Offset to one side (hip_width/2) so the Mirror modifier produces the
+    # other leg at -hip_width/2, matching boots.py's placement convention.
+    hip_height = DIMS["upper_leg_length"] + DIMS["lower_leg_length"]
+    obj.location = (
+        DIMS["hip_width"] / 2,
+        0.0,
+        hip_height - length / 2,
+    )
+
+    mirror = obj.modifiers.new("Mirror", "MIRROR")
+    mirror.use_axis = (True, False, False)
+    bevel = obj.modifiers.new("Bevel", "BEVEL")
+    bevel.width = DIMS["bevel_width"]
+    bevel.segments = DIMS["bevel_segments"]
+    subsurf = obj.modifiers.new("Subsurf", "SUBSURF")
+    subsurf.levels = DIMS["subsurf_levels"]
+    return obj
+```
+
+- [ ] **Step 5: Register the new pieces in `clothing.py`**
+
+```python
+# tools/assetgen/blender/clothing.py (modify)
+from .clothing_parts import boots, jumper, shorts, tunic
+
+PART_BUILDERS = {
+    "tunic": tunic.build,
+    "boots": boots.build,
+    "jumper": jumper.build,
+    "shorts": shorts.build,
+}
+```
+
+- [ ] **Step 6: Add `wool`/`denim` ramps to `palette.py`**
+
+Verified against the actual current file (see Task 14's Step 3, which already
+added `cloth`/`leather`): neither `wool` nor `denim` exists yet either.
+
+```python
+# tools/assetgen/palette.py (modify — append two more rows to RAMPS, after the
+# cloth/leather rows Task 14 added)
+RAMPS = [
+    # ... existing entries including Task 14's cloth/leather unchanged ...
+    ("wool", ["7a6f5c", "978b74", "b5a890", "d1c4ab"]),
+    ("denim", ["30455c", "405a75", "53718f", "6b8ba8"]),
+]
+```
+
+- [ ] **Step 7: Swap Wren's clothing/palette to the redesigned outfit**
+
+```python
+# tools/assetgen/blender/archetypes/wren.py (modify)
+WREN_SPEC = ArchetypeSpec(
+    name="wren",
+    bone_scales={},
+    clothing=["jumper", "shorts", "boots"],
+    palette={
+        "jumper": ("wool", 1),
+        "shorts": ("denim", 0),
+        "boots": ("leather", 0),
+    },
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+```
+
+- [ ] **Step 8: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_wren_archetype.py -v`
+Expected: PASS (2 tests), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add tools/assetgen/palette.py \
+        tools/assetgen/blender/body_dims.py \
+        tools/assetgen/blender/clothing_parts/jumper.py \
+        tools/assetgen/blender/clothing_parts/shorts.py \
+        tools/assetgen/blender/clothing.py \
+        tools/assetgen/blender/archetypes/wren.py \
+        tests/python/test_wren_archetype.py
+git commit -m "Add Wren's redesigned bohemian outfit (checkpoint 2: jumper + shorts)"
+```
+
+---
+
+### Task 16: Villager archetype on the shared base
+
+**Files:**
+- Create: `tools/assetgen/blender/archetypes/villager.py`
+- Create: `tests/python/test_villager_archetype_v2.py` (a new file — the existing
+  `tests/python/test_villager_archetype.py` tests v1's `character_gen`-based
+  villager and is deleted in Task 17 once that pipeline is retired; keeping the
+  two files distinct until then avoids clobbering v1's regression coverage
+  mid-migration)
+
+The villager stays "the second archetype, proving the pipeline is genuinely
+data-driven" (same framing as v1's `VILLAGER_SPEC` comment in `build.py`) — reuses
+the plain `tunic`/`boots` pieces (no redesign needed, she was never costumed as
+elaborately as Wren) but with a different palette so she's visually distinct, plus
+a small proportion tweak (`bone_scales`) so she doesn't look like a Wren clone.
+
+**On hair:** the spec's "Migration" section describes the villager as differing
+from Wren in "proportions/clothing/hair." However, no chunk in this plan (1-4)
+ever authored hair as a separate, swappable clothing-parts piece — per Task 15's
+own note, Wren's hair is part of the shared base humanoid mesh (Chunk 1, Task 3),
+not a costume prop layered on via `clothing.py`'s `PART_BUILDERS`. Per-archetype
+hair customization is therefore out of scope for this migration; the villager
+uses the same base-mesh hair as Wren, differentiated only by `bone_scales` and
+`palette` as described above. A follow-up plan can introduce a real hair
+clothing-part system later if a villager needs to look distinctly different
+above the neckline.
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_villager_archetype_v2.py
+from tests.python.blender_test_helpers import (
+    requires_blender,
+    run_in_blender,
+    scratch_output_path,
+)
+
+
+@requires_blender
+def test_villager_builds_and_validates():
+    out_path = scratch_output_path(".glb")
+    driver = f'''
+import sys, json
+sys.path.insert(0, ".")
+from tools.assetgen.blender import build_character
+from tools.assetgen.blender.archetypes.villager import VILLAGER_SPEC
+
+info = build_character.build(VILLAGER_SPEC, r"{out_path}")
+print("RESULT:" + json.dumps(info))
+'''
+    try:
+        result = run_in_blender(driver)
+        assert result["ok"] is True, result["errors"]
+        assert out_path.exists()
+    finally:
+        out_path.unlink(missing_ok=True)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_villager_archetype_v2.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named
+'tools.assetgen.blender.archetypes.villager'` (or SKIPPED without Blender)
+
+- [ ] **Step 3: Write `archetypes/villager.py`**
+
+```python
+# tools/assetgen/blender/archetypes/villager.py
+"""The villager's ArchetypeSpec — the second archetype built on the shared
+base, proving the pipeline is genuinely data-driven (same role v1's
+VILLAGER_SPEC played in build.py, per its own comment there). Reuses Chunk 2's
+plain tunic/boots (no redesign — she was never costumed as elaborately as
+Wren) with a different palette and a slightly stockier build so she doesn't
+read as a Wren reskin.
+"""
+from __future__ import annotations
+
+from ..archetype_spec import ArchetypeSpec
+
+VILLAGER_SPEC = ArchetypeSpec(
+    name="villager",
+    bone_scales={"UpLeg.L": 0.95, "UpLeg.R": 0.95, "Spine": 1.05},
+    clothing=["tunic", "boots"],
+    palette={"tunic": ("cloth", 0), "boots": ("leather", 1)},
+    clips=["idle", "walk", "run", "wave", "stir"],
+)
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_villager_archetype_v2.py -v`
+Expected: PASS (1 test), or SKIPPED if no Blender available locally.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tools/assetgen/blender/archetypes/villager.py tests/python/test_villager_archetype_v2.py
+git commit -m "Add villager v2 ArchetypeSpec on the shared Blender base"
+```
+
+---
+
+### Task 17: `build.py` swap-over + full v1 character stack retirement
+
+**Files:**
+- Modify: `tools/assetgen/build.py` (Chunk 4/Task 13 already added
+  `build_blender_character()` plus its `BLENDER_BUILD_TIMEOUT`/
+  `BUILD_CHARACTER_SCRIPT` constants and `dataclasses`/`json`/`subprocess`/
+  `toolchain`/`ArchetypeSpec` imports directly into this file — this task does
+  **not** redefine any of that. It only replaces `build_all()`'s old
+  `character_gen`-based Wren/villager block with calls to the already-existing
+  `build_blender_character()`, swaps the old v1 imports/constants for the new
+  archetype imports, and updates `main()`'s print summary to match the v2
+  manifest shape)
+- Delete: `tools/assetgen/character.py`, `tools/assetgen/character_spec.py`,
+  `tools/assetgen/character_gen.py`, `tools/assetgen/character_validate.py`,
+  `tools/assetgen/animation_contract.py`, `tools/assetgen/rig_contract.py`,
+  `tools/assetgen/part_registry.py`
+- Delete: `tests/python/test_character.py`, `tests/python/test_character_gen.py`,
+  `tests/python/test_character_migration.py`,
+  `tests/python/test_character_spec.py`,
+  `tests/python/test_character_validate.py`,
+  `tests/python/test_part_registry.py`,
+  `tests/python/test_animation_contract.py`, `tests/python/test_rig_contract.py`,
+  `tests/python/test_villager_archetype.py` (the old v1 one — Task 16 already
+  created its v2 replacement, `test_villager_archetype_v2.py`)
+- Test: `tests/python/test_build_all_uses_v2_characters.py`
+
+**Scope:** confirmed against the actual repo before writing this task —
+`tools/assetgen/part_registry.py` is used *only* by `character_gen.py` (which is
+used only by `character.py`/`build.py`'s old code and its own test files listed
+above); `tools/assetgen/props.py` never imports `part_registry` or
+`character_gen` at all, it only uses `tools.assetgen.mesh` directly. So once
+`build.py` stops calling `character_gen.generate()`, the entire v1
+character-specific module stack above has zero remaining callers anywhere in the
+repo — this task deletes it outright rather than leaving unused dead code
+behind. `gltf.py` is **not** deleted or trimmed: `props.py` still uses its
+`build_glb()`, and while `build_scene_glb()`/`SceneNode` (also in `gltf.py`)
+become unused after this task, they're small, self-contained, and left in place
+to avoid scope creep on a file this task doesn't otherwise need to touch — a
+future cleanup pass can remove them if desired.
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/python/test_build_all_uses_v2_characters.py
+from tests.python.blender_test_helpers import requires_blender, scratch_output_path
+from tools.assetgen import build
+
+
+@requires_blender
+def test_build_all_writes_v2_wren_and_villager_glbs(monkeypatch):
+    # Same "get the shared scratch dir" pattern Task 13's own integration test
+    # uses (tests/python/test_build_blender_character_integration.py) — repo-local
+    # under artifacts/, not pytest's tmp_path, since a subprocess-invoked headless
+    # `blender` in this harness needs a path guaranteed to exist inside the repo.
+    scratch_dir = scratch_output_path("").parent
+    monkeypatch.setattr(build, "OUT_DIR", scratch_dir)
+    wren_path = scratch_dir / "wren.glb"
+    villager_path = scratch_dir / "villager.glb"
+    try:
+        manifest = build.build_all()
+        assert wren_path.exists()
+        assert villager_path.exists()
+        assert manifest["characters"]["wren"]["ok"] is True
+        assert manifest["characters"]["villager"]["ok"] is True
+        # v1's CharacterSpec-only manifest fields (resolved_parts,
+        # rig_contract_version) no longer apply to a Blender-backed build —
+        # build_blender_character()'s return shape (Chunk 4, Task 13) is
+        # {"archetype", "ok", "errors", "path"}.
+        assert "resolved_parts" not in manifest["characters"]["wren"]
+        assert manifest["characters"]["wren"]["path"] == str(wren_path)
+    finally:
+        wren_path.unlink(missing_ok=True)
+        villager_path.unlink(missing_ok=True)
+        (scratch_dir / "manifest.json").unlink(missing_ok=True)
+        (scratch_dir / "palette_main.png").unlink(missing_ok=True)
+        for prop_glb in scratch_dir.glob("*.glb"):
+            prop_glb.unlink(missing_ok=True)
+```
+
+Note: `build_all()` also writes every prop's `.glb` and `palette_main.png` into
+`OUT_DIR` — the cleanup above removes anything this test run left in the shared
+scratch dir so it doesn't accumulate junk across runs, same spirit as every
+other test in this plan unlinking its `scratch_output_path()` output.
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python3 -m pytest tests/python/test_build_all_uses_v2_characters.py -v`
+Expected: FAIL — `manifest["characters"]["wren"]` still has the old
+`resolved_parts` shape from `character_gen`.
+
+- [ ] **Step 3: Update `build.py`'s imports/constants**
+
+Remove the v1-only imports and module-level `VILLAGER_SPEC`, add the two v2
+archetype imports:
+
+```python
+# tools/assetgen/build.py (modify the top-of-file imports)
+from . import gltf, palette, props  # character/character_gen/character_spec/
+                                     # character_validate/animation_contract/
+                                     # rig_contract removed — see this task's
+                                     # scope note
+from .blender import toolchain  # already added by Chunk 4, Task 13 — unchanged
+from .blender.archetype_spec import ArchetypeSpec  # already added by Chunk 4 — unchanged
+from .blender.archetypes.villager import VILLAGER_SPEC
+from .blender.archetypes.wren import WREN_SPEC
+
+# The v1 module-level `VILLAGER_SPEC = CharacterSpec(archetype="villager", ...)`
+# and its docstring/comment are deleted — replaced by the import above.
+# BLENDER_BUILD_TIMEOUT / BUILD_CHARACTER_SCRIPT / build_blender_character()
+# (Chunk 4, Task 13) are already in this file and are NOT touched by this task.
+```
+
+Also delete the now-unused `_walk_nodes()` and `_character_manifest_entry()`
+helpers (both only served the old `character_gen`-based rig-tree walk/manifest
+shape, which `build_blender_character()` doesn't use).
+
+- [ ] **Step 4: Replace `build_all()`'s Wren/villager block**
+
+```python
+# tools/assetgen/build.py (modify build_all(), leave the palette/props blocks
+# above it unchanged)
+    manifest["characters"]["wren"] = build_blender_character(WREN_SPEC)
+    manifest["characters"]["villager"] = build_blender_character(VILLAGER_SPEC)
+```
+
+This replaces the old block:
+
+```python
+    wren_rig, wren_clips = character_gen.generate(character.WREN_SPEC)
+    character_validate.validate(wren_rig, wren_clips, tri_budget=character.TRI_BUDGET)
+    wren_glb = gltf.build_scene_glb(wren_rig, wren_clips, "wren")
+    (OUT_DIR / "wren.glb").write_bytes(wren_glb)
+    manifest["characters"]["wren"] = _character_manifest_entry(
+        character.WREN_SPEC, wren_rig, wren_clips, wren_glb,
+    )
+
+    villager_rig, villager_clips = character_gen.generate(VILLAGER_SPEC)
+    character_validate.validate(villager_rig, villager_clips)
+    villager_glb = gltf.build_scene_glb(villager_rig, villager_clips, "villager")
+    (OUT_DIR / "villager.glb").write_bytes(villager_glb)
+    manifest["characters"]["villager"] = _character_manifest_entry(
+        VILLAGER_SPEC, villager_rig, villager_clips, villager_glb,
+    )
+```
+
+`build_blender_character()` (Chunk 4, Task 13) already writes
+`OUT_DIR/<spec.name>.glb` itself and returns the full manifest-entry dict, so
+`build_all()` no longer needs to write the `.glb` bytes or build the entry
+by hand for characters.
+
+- [ ] **Step 5: Update `main()`'s print summary**
+
+```python
+# tools/assetgen/build.py (modify main())
+def main() -> int:
+    manifest = build_all()
+    print(f"assets/generated/ <- palette_main.png ({manifest['palette']['palette_main.png']['bytes']} B)")
+    for name, info in manifest["props"].items():
+        print(f"assets/generated/ <- {name}.glb  ({info['tris']} tris, {info['bytes']} B)")
+    for name, info in manifest["characters"].items():
+        status = "ok" if info["ok"] else f"FAILED: {info['errors']}"
+        print(f"assets/generated/ <- {name}.glb  ({status})")
+    print("asset build OK")
+    return 0
+```
+
+This replaces the old character-loop body, which printed `info['tris']`/
+`info['clips']` — fields the v2 manifest entry (`{"archetype", "ok", "errors",
+"path"}`) doesn't have.
+
+- [ ] **Step 6: Delete the entire v1 character-specific module stack**
+
+```bash
+git rm tools/assetgen/character.py \
+       tools/assetgen/character_spec.py \
+       tools/assetgen/character_gen.py \
+       tools/assetgen/character_validate.py \
+       tools/assetgen/animation_contract.py \
+       tools/assetgen/rig_contract.py \
+       tools/assetgen/part_registry.py
+git rm tests/python/test_character.py \
+       tests/python/test_character_gen.py \
+       tests/python/test_character_migration.py \
+       tests/python/test_character_spec.py \
+       tests/python/test_character_validate.py \
+       tests/python/test_part_registry.py \
+       tests/python/test_animation_contract.py \
+       tests/python/test_rig_contract.py \
+       tests/python/test_villager_archetype.py
+```
+
+- [ ] **Step 7: Run test to verify it passes**
+
+Run: `python3 -m pytest tests/python/test_build_all_uses_v2_characters.py -v`
+Expected: PASS (1 test), or SKIPPED if no Blender available locally.
+
+Also run the full existing Python test suite, to confirm nothing outside the
+deleted files imported any of the removed modules:
+
+Run: `python3 -m pytest tests/python -v`
+Expected: PASS. If any remaining test imports `character_gen`, `part_registry`,
+`animation_contract`, `rig_contract`, `character`, `character_spec`, or
+`character_validate`, that import must be found and fixed (or that test deleted
+if it only existed to test retired v1 behavior) before committing — this task's
+Step 6 file list was built from an exhaustive `grep -rln` for those module names
+in the actual repo at planning time (see this task's Scope note), but re-verify
+at implementation time in case the codebase has grown new references since.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add tools/assetgen/build.py tests/python/test_build_all_uses_v2_characters.py
+git commit -m "Swap build.py to the v2 Blender pipeline; retire v1 character stack"
+```
+
+---
+
+### Task 18: In-Godot verification
+
+**Not a code task** — a manual verification checkpoint using this session's Godot
+MCP tooling, per the spec's "this gets verified empirically during implementation"
+requirement. Record the outcome as a short note in this plan (or the session
+checkpoint) once done; no test file, since this is exactly the class of check
+`validate.py`/`character_gallery.tscn` can't fully automate (visual/import-pipeline
+correctness inside the actual Godot editor).
+
+- [ ] **Step 1: Rebuild assets**
+
+Run `python3 -m tools.assetgen.build` so `assets/generated/wren.glb` and
+`villager.glb` are the new v2-built files.
+
+- [ ] **Step 2: Confirm the animation contract in Godot**
+
+Using the Godot MCP tools available in this session: open the project, import
+`assets/generated/wren.glb`, and inspect its `AnimationPlayer`. Confirm
+`AnimationPlayer.get_animation_list()` returns exactly `["idle", "walk", "run",
+"wave", "stir"]` (Godot's importer strips the `-loop` suffix and sets the loop
+flag, per `avatar.gd`'s doc-comment), and that `idle`/`walk`/`run` have looping
+enabled while `wave`/`stir` do not. If the exporter didn't honor the naming/loop
+convention automatically, fix it in `blender/export.py` (rename Actions
+immediately before export) rather than changing `avatar.gd` — the spec's Godot
+integration contract requires zero `avatar.gd` changes.
+
+- [ ] **Step 3: Confirm the look-dev scene still works**
+
+Open `src/lookdev/character_gallery.tscn` in the Godot editor (or run the project
+to it) and confirm it still instances both `wren.glb` and `villager.glb`
+correctly with no visible disconnection/scale artifacts — the same kind of visual
+check that caught the original "floating disconnected villager" bug, now backed
+up by `validate.py`'s automated gate from Chunk 3.
+
+- [ ] **Step 4: Confirm `avatar.gd` needs no changes**
+
+Run `src/player/player.tscn` (the scene that instances `avatar.gd`/
+`WREN_SCENE_PATH`) via `godot-run_project` with `scene:
+"src/player/player.tscn"`, then use `godot-get_debug_output` to confirm no
+errors/warnings reference `avatar.gd`, `WREN_SCENE_PATH`, or a missing
+animation. Manually drive the player (walk in each direction, stand idle, and
+trigger both gestures if the project has a debug key binding for them — check
+`src/player/player.gd` or the input map for the exact bindings) and visually
+confirm `idle`/`walk`/`run` swap correctly with movement state and
+`wave`/`stir` play once without looping, with zero edits made to `avatar.gd`
+itself. Stop the run with `godot-stop_project` when done.
+
+---
+
+### Task 19: Docs updates
+
+**Files:**
+- Modify: `tools/assetgen/README.md`
+- Modify: `docs/asset-inventory.md`
+
+- [ ] **Step 1: Update `tools/assetgen/README.md`**
+
+Task 17 deleted `part_registry.py`/`character_gen.py`/`character_validate.py`/etc.
+outright, so this README's existing "Adding a new part" / "Adding a new
+archetype" sections (if they describe that deleted pipeline) must be **replaced**,
+not just prefixed with a pointer — check the current file's exact section
+headings and content at implementation time and remove/rewrite whichever
+sections describe the deleted modules, replacing them with:
+
+```markdown
+## Adding a new character archetype
+
+Character generation (Wren, villager, and any future NPC) goes through
+`tools/assetgen/blender/` (see "Blender toolchain" above) — one `ArchetypeSpec`
+per archetype under `tools/assetgen/blender/archetypes/`, built via
+`build_character.build()` / `build.py`'s `build_blender_character()`. Non-character
+props (trees, fences, crates, etc.) are unaffected — they're still generated
+directly by `tools/assetgen/props.py` via `tools/assetgen/mesh.py`, which never
+depended on the old character-specific pipeline this replaces.
+
+1. Add clothing pieces under `tools/assetgen/blender/clothing_parts/` (one file
+   per piece, following `tunic.py`/`jumper.py`/`shorts.py`'s beveled+subsurfed,
+   `body_dims.DIMS`-sized authoring style) and register them in `clothing.py`'s
+   `PART_BUILDERS`.
+2. Add ramp names to `tools/assetgen/palette.py` if the archetype needs a color
+   not already covered.
+3. Add `tools/assetgen/blender/archetypes/<name>.py` with an `ArchetypeSpec`
+   naming the mandatory 5 clips, the clothing pieces, and a palette entry per
+   piece.
+4. Wire it into `build.py`'s `build_all()` alongside `wren`/`villager`.
+```
+
+Also remove any remaining "Rebuilding all generated assets" / "Done-gate
+checklist" wording in the README that references `resolved_parts`,
+`rig_contract_version`, `animation_contract_version`, or other v1-manifest-shape
+fields (Task 17's `build_all()` manifest entries for characters are now just
+`{"archetype", "ok", "errors", "path"}` — the "Done-gate checklist" section
+should describe checking `ok: true` for both characters instead).
+
+- [ ] **Step 2: Update `docs/asset-inventory.md`**
+
+Update the file's intro line that references
+`docs/superpowers/specs/2026-08-08-character-procedural-pipeline-design.md` (the
+v1 spec) to instead reference
+`docs/superpowers/specs/2026-08-08-character-pipeline-v2-blender-design.md` (the
+v2 spec this whole plan implements).
+
+Update the `wren` row's `Procedural/Handcrafted` and `Rig/Anim` columns to reflect
+the new pipeline:
+
+```markdown
+| wren | character | witch (player) | procedural (Blender-backed, v2 pipeline) | v2 base humanoid rig/anim (blender/animate.py) | blender/archetypes/wren.py | P0 | Phase 1 player avatar | done |
+```
+
+Update every `villager (...)` row's `Rig/Anim` and `Dependencies` columns
+similarly (`v2 base humanoid rig/anim (blender/animate.py)` /
+`blender/archetypes/villager.py` as the template new villager NPCs will
+customize from), since they all currently point at the retired
+`part_registry` villager entries.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tools/assetgen/README.md docs/asset-inventory.md
+git commit -m "Update assetgen README and asset inventory for the v2 Blender pipeline"
+```
+
+---
+
+## Plan complete
+
+All five chunks are written, reviewed, and committed. Next: execute this plan
+(see `subagent-driven-development`, per this session's earlier note that this
+harness's subagent support makes it preferable to the single-session
+`executing-plans` skill for a plan this size).
