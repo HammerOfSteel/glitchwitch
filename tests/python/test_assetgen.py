@@ -81,7 +81,9 @@ def test_cone_winds_outward():
     assert volume > expected * 0.85, volume
 
 
-@pytest.mark.parametrize("name", ["crate", "ground_tile", "pine", "jar"])
+@pytest.mark.parametrize(
+    "name", ["crate", "ground_tile", "pine", "jar", "planter", "rock"]
+)
 def test_closed_props_have_positive_volume(name):
     volume = _signed_volume(props.build_prop(name, seed=0))
     assert volume > 0.0, f"{name}: negative signed volume {volume} (inward faces)"

@@ -99,6 +99,25 @@ def build_pine(seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_planter(_seed: int = 0) -> MeshBuilder:
+    """Raised garden bed — a soil-topped box for the cottage garden."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 0.2, 0), (0.9, 0.4, 0.5), "wood", 1, top=("clay", 0))
+    return builder
+
+
+def build_rock(seed: int = 0) -> MeshBuilder:
+    """A low, faceted rock — scatterable or occasional hero placement."""
+    rng = random.Random(seed)
+    builder = MeshBuilder()
+    width = rng.uniform(0.35, 0.5)
+    depth = rng.uniform(0.3, 0.45)
+    height = rng.uniform(0.2, 0.32)
+    add_box(builder, (0, height / 2.0, 0), (width, height, depth), "stone", 1,
+            top=("stone", 2))
+    return builder
+
+
 PROPS = {
     "crate": build_crate,
     "fence": build_fence,
@@ -106,6 +125,8 @@ PROPS = {
     "jar": build_jar,
     "mug": build_mug,
     "pine": build_pine,
+    "planter": build_planter,
+    "rock": build_rock,
 }
 
 TRI_BUDGET = 600
