@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
-## ZoneBuilder: turns a Zone resource into real nodes (discrete props +
-## MultiMesh scatter), deterministically.
+## ZoneBuilder: turns a Zone resource into real nodes from discrete prop
+## placements, deterministically.
 
 const CRATE_SCENE := "res://assets/generated/crate.glb"
 
