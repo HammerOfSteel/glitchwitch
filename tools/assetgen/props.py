@@ -159,8 +159,8 @@ def build_flower(seed: int = 0) -> MeshBuilder:
     bloom_shade = rng.choice([0, 1, 2])
     builder.add_face(
         [
-            (-0.05, 0.18, 0.0), (0.05, 0.18, 0.0),
-            (0.05, 0.18, 0.1), (-0.05, 0.18, 0.1),
+            (-0.05, 0.18, 0.1), (0.05, 0.18, 0.1),
+            (0.05, 0.18, 0.0), (-0.05, 0.18, 0.0),
         ],
         "honey", bloom_shade,
     )
