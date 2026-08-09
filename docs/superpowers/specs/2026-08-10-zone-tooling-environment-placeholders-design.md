@@ -60,11 +60,13 @@ renders exactly one mesh with one material — it can't mix arbitrary scene
 variants the way a `PropPlacement` can. `ZoneBuilder` builds **one
 `MultiMeshInstance3D` per variant mesh** in a region (not one per region),
 splitting the region's instance count evenly across variants (round-robin
-by seeded draw order — no per-variant weight field is needed for this
-slice; all variants in a region are equally likely). A "grass tuft" scatter
-region with 2 variants therefore produces 2
-`MultiMeshInstance3D` nodes, each seeded from the same region seed so the
-combined result is still deterministic. Each generated prop used for
+by variant index — no per-variant weight field is needed for this slice;
+all variants in a region are equally likely, and any remainder from
+uneven division goes to the lowest-index variants first, deterministically).
+A "grass tuft" scatter region with 2 variants therefore produces 2
+`MultiMeshInstance3D` nodes, each seeded from the region seed combined with
+its own variant index so the combined result is still fully deterministic.
+Each generated prop used for
 scatter (e.g. `grass_tuft.glb`) is a single-mesh `PackedScene`; `Zone`
 authoring extracts the `Mesh` from it directly (`(load(path) as
 PackedScene).instantiate().get_child(0).mesh` at authoring time, or simply
