@@ -9,3 +9,15 @@ func test_prop_placement_defaults() -> void:
 	assert_vector(placement.position).is_equal(Vector3.ZERO)
 	assert_vector(placement.rotation_degrees).is_equal(Vector3.ZERO)
 	assert_float(placement.scale).is_equal(1.0)
+
+
+func test_scatter_region_defaults() -> void:
+	var region := ScatterRegion.new()
+	assert_array(region.variants).is_empty()
+	assert_int(region.shape).is_equal(ScatterRegion.Shape.CIRCLE)
+	assert_vector(region.center).is_equal(Vector3.ZERO)
+	assert_vector(region.size).is_equal(Vector2.ZERO)
+	assert_float(region.density).is_equal(0.0)
+	assert_float(region.scale_min).is_equal(1.0)
+	assert_float(region.scale_max).is_equal(1.0)
+	assert_int(region.seed).is_equal(0)
