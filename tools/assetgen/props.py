@@ -110,6 +110,12 @@ PROPS = {
 
 TRI_BUDGET = 600
 
+HERO_TRI_BUDGET = 1500
+
+# Props allowed to spend the hero budget instead of the regular one — kept
+# to a short, explicit list so budget creep needs a deliberate edit here.
+HERO_PROPS: set[str] = set()
+
 
 def build_prop(name: str, seed: int = 0) -> MeshBuilder:
     if name not in PROPS:

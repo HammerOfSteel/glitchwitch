@@ -126,8 +126,9 @@ def test_glb_position_bounds_match_accessor_min_max():
 def test_prop_builds_within_budget(name):
     builder = props.build_prop(name, seed=0)
     assert builder.tri_count > 0
-    assert builder.tri_count <= props.TRI_BUDGET, (
-        f"{name}: {builder.tri_count} tris over budget {props.TRI_BUDGET}"
+    budget = props.HERO_TRI_BUDGET if name in props.HERO_PROPS else props.TRI_BUDGET
+    assert builder.tri_count <= budget, (
+        f"{name}: {builder.tri_count} tris over budget {budget}"
     )
     assert len(builder.positions) == len(builder.normals) == len(builder.uvs)
     assert max(builder.indices) == builder.vertex_count - 1
