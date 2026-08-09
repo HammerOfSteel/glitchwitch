@@ -38,6 +38,15 @@ ALLOWED_FILENAMES = {
     ".godot-version", ".gdlintrc", "Makefile", "export_presets.cfg",
 }
 
+# Deliberate, scoped exceptions to the no-committed-binaries policy — see
+# docs/design-bible.md's "Asset pipeline (decision record)" entry on
+# character-pipeline-v2. Each entry here must be a specific tracked-file path
+# (never a blanket extension like ".blend"), so this stays an intentional,
+# reviewed allowlist rather than an open door for arbitrary binaries.
+ALLOWED_BINARY_FILES = {
+    "tools/assetgen/blender/base_humanoid.blend",
+}
+
 IGNORED_DIRS = {".git", ".godot", ".tooling", ".pytest_cache", "__pycache__",
                 "assets", "addons", "build", "exports", "reports", "artifacts",
                 ".venv"}
@@ -69,6 +78,8 @@ def test_required_files_exist_and_are_substantial():
 def test_no_binary_files_tracked():
     offenders = []
     for rel, path in tracked_files():
+        if rel.as_posix() in ALLOWED_BINARY_FILES:
+            continue
         suffix = path.suffix.lower() or path.name
         if (suffix not in ALLOWED_EXTENSIONS
                 and path.name not in ALLOWED_EXTENSIONS

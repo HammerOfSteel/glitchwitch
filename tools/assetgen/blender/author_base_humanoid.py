@@ -254,6 +254,38 @@ def map_faces_to_palette_cell(obj: bpy.types.Object, ramp: str, shade: int) -> N
         loop.uv = (u, 1.0 - v)
 
 
+def map_polygon_indices_to_palette_cell(
+    obj: bpy.types.Object,
+    polygon_indices: set[int],
+    ramp: str,
+    shade: int,
+) -> None:
+    uv_layer = ensure_uv_layer(obj)
+    u, v = palette.cell_uv(ramp, shade)
+    for polygon_index in polygon_indices:
+        polygon = obj.data.polygons[polygon_index]
+        for loop_index in range(polygon.loop_start, polygon.loop_start + polygon.loop_total):
+            uv_layer.data[loop_index].uv = (u, 1.0 - v)
+
+
+def assign_post_fusion_palette_uvs(body: bpy.types.Object) -> None:
+    map_faces_to_palette_cell(body, "cream", 2)
+    head_face_indices = set()
+    head_half_width = HEAD_WIDTH * 0.72
+    head_half_depth = HEAD_DEPTH * 0.72
+    head_half_height = DIMS["head_height"] * 0.58
+    for polygon in body.data.polygons:
+        center = polygon.center
+        head_metric = (
+            (center.x / head_half_width) ** 2
+            + (center.y / head_half_depth) ** 2
+            + ((center.z - HEAD_CENTER_Z) / head_half_height) ** 2
+        )
+        if head_metric <= 1.0:
+            head_face_indices.add(polygon.index)
+    map_polygon_indices_to_palette_cell(body, head_face_indices, "cream", 3)
+
+
 def build_body_parts() -> list[bpy.types.Object]:
     torso_center_z = HIPS_Z + (DIMS["torso_height"] / 2.0) + TORSO_LIFT
     torso = cuboid(
@@ -378,16 +410,8 @@ def build_body_parts() -> list[bpy.types.Object]:
     add_smoothing_stack(abdomen, mirror=False)
     add_smoothing_stack(waist, mirror=False)
     add_smoothing_stack(crotch, mirror=False)
-    map_faces_to_palette_cell(torso, "cream", 2)
-    map_faces_to_palette_cell(head, "cream", 3)
-    map_faces_to_palette_cell(neck, "cream", 2)
-    map_faces_to_palette_cell(pelvis, "cream", 2)
-    map_faces_to_palette_cell(abdomen, "cream", 2)
-    map_faces_to_palette_cell(waist, "cream", 2)
-    map_faces_to_palette_cell(crotch, "cream", 2)
     for obj in [shoulder_socket, upper_arm, lower_arm, hand, upper_leg, lower_leg, foot]:
         add_smoothing_stack(obj, mirror=True)
-        map_faces_to_palette_cell(obj, "cream", 2)
     return [torso, pelvis, abdomen, waist, crotch, neck, head, shoulder_socket, upper_arm, lower_arm, hand, upper_leg, lower_leg, foot]
 
 
@@ -401,7 +425,7 @@ def join_body_parts(parts: list[bpy.types.Object]) -> bpy.types.Object:
     body.name = "body"
     body.data.name = "body_mesh"
     apply_body_fusion(body)
-    map_faces_to_palette_cell(body, "cream", 2)
+    assign_post_fusion_palette_uvs(body)
     return body
 
 
