@@ -31,6 +31,7 @@ func rebuild() -> void:
 	if _zone == null:
 		return
 	_build_placements()
+	_build_scatter()
 
 
 func _build_placements() -> void:
@@ -45,3 +46,64 @@ func _build_placements() -> void:
 			node3d.rotation_degrees = placement.rotation_degrees
 			node3d.scale = Vector3.ONE * placement.scale
 		PaletteApply.apply(instance)
+
+
+func _region_area(region: ScatterRegion) -> float:
+	if region.shape == ScatterRegion.Shape.CIRCLE:
+		return PI * region.size.x * region.size.x
+	return region.size.x * region.size.y
+
+
+func _build_scatter() -> void:
+	var palette_material := load(PaletteApply.PALETTE_MATERIAL_PATH) as Material
+	for region in _zone.scatter_regions:
+		var variants: Array[Mesh] = []
+		for variant in region.variants:
+			if variant != null:
+				variants.append(variant)
+		if variants.is_empty():
+			continue
+		var total := roundi(region.density * _region_area(region))
+		var counts := _split_evenly(total, variants.size())
+		for i in range(variants.size()):
+			var count: int = counts[i]
+			if count <= 0:
+				continue
+			var rng := RandomNumberGenerator.new()
+			rng.seed = region.seed + i
+			var mmi := MultiMeshInstance3D.new()
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = variants[i]
+			mm.instance_count = count
+			for instance_index in range(count):
+				mm.set_instance_transform(instance_index, _random_transform(rng, region))
+			mmi.multimesh = mm
+			mmi.material_override = palette_material
+			add_child(mmi)
+
+
+func _split_evenly(total: int, variant_count: int) -> Array:
+	var counts: Array = []
+	counts.resize(variant_count)
+	counts.fill(0)
+	for i in range(total):
+		counts[i % variant_count] += 1
+	return counts
+
+
+func _random_transform(rng: RandomNumberGenerator, region: ScatterRegion) -> Transform3D:
+	var offset: Vector3
+	if region.shape == ScatterRegion.Shape.CIRCLE:
+		var angle := rng.randf_range(0.0, TAU)
+		var radius := region.size.x * sqrt(rng.randf())
+		offset = Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
+	else:
+		offset = Vector3(
+			rng.randf_range(-region.size.x / 2.0, region.size.x / 2.0),
+			0.0,
+			rng.randf_range(-region.size.y / 2.0, region.size.y / 2.0),
+		)
+	var scale := rng.randf_range(region.scale_min, region.scale_max)
+	var basis := Basis(Vector3.UP, rng.randf_range(0.0, TAU)).scaled(Vector3.ONE * scale)
+	return Transform3D(basis, region.center + offset)
