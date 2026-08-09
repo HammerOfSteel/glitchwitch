@@ -39,6 +39,14 @@ not a commitment to keep building it procedurally in-house.
 | pine-tree | nature | tree | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 environment v1 | planned |
 | ground-tile | nature | terrain tile | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 environment v1 | planned |
 | fence | building | fence kit piece | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 environment v1 | planned |
-| cottage-kit | building | cottage wall/roof/door kit | procedural (to design, Phase 3) | n/a | Phase 3 nature/building foundation | P0 | Phase 4 cottage interior/garden | planned |
-| rocks-flora | nature | rocks + flora variety pack | procedural (to design, Phase 3) | n/a | Phase 3 nature/building foundation | P1 | Phase 4 environment v1 | planned |
+| cottage-kit | building | cottage wall/roof/door kit | procedural placeholder — see cottage_wall/cottage_corner/cottage_roof rows | n/a | tools/assetgen/props.py | P0 | Phase 4 cottage interior/garden | done (v1 placeholder, proven in `cottage_garden` zone) |
+| rocks-flora | nature | rocks + flora variety pack | procedural placeholder — see rock/grass-tuft/flower rows | n/a | tools/assetgen/props.py | P1 | Phase 4 environment v1 | done (v1 placeholder, proven in `cottage_garden` zone) |
 | village-hall-signal-house | building | Signal House interior/exterior | procedural or handcrafted (TBD Phase 3) | n/a | Phase 3 nature/building foundation | P2 | Phase 10 Act II debate arc | planned |
+| cottage-wall | building | cottage wall kit piece (hero prop) | procedural placeholder | n/a | tools/assetgen/props.py (`build_cottage_wall`) | P0 | Phase 4 cottage interior/garden | done |
+| cottage-corner | building | cottage corner post kit piece (hero prop) | procedural placeholder | n/a | tools/assetgen/props.py (`build_cottage_corner`) | P0 | Phase 4 cottage interior/garden | done |
+| cottage-roof | building | cottage flat roof kit piece (hero prop) | procedural placeholder | n/a | tools/assetgen/props.py (`build_cottage_roof`) | P0 | Phase 4 cottage interior/garden | done |
+| planter | nature | garden planter box | procedural placeholder | n/a | tools/assetgen/props.py (`build_planter`) | P1 | Phase 4 environment v1 | done |
+| well | building | small stone well | procedural placeholder | n/a | tools/assetgen/props.py (`build_well`) | P1 | Phase 4 environment v1 | done |
+| rock | nature | scatter/discrete rock | procedural placeholder | n/a | tools/assetgen/props.py (`build_rock`) | P1 | Phase 4 environment v1 | done |
+| grass-tuft | nature | scatter grass patch prop | procedural placeholder | n/a | tools/assetgen/props.py (`build_grass_tuft`) | P1 | Phase 4 environment v1 | done |
+| flower | nature | scatter flower prop | procedural placeholder | n/a | tools/assetgen/props.py (`build_flower`) | P1 | Phase 4 environment v1 | done |

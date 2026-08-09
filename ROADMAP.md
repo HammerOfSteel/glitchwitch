@@ -84,11 +84,13 @@ fences, and cottage/building kit pieces — informed by the referenced project's
 procedural approach, adapted to Godot's mesh/scene conventions.
 
 ## Phase 4 — World & Time (`phase/04-world`)
-- T4.1 Environment placeholders (extend `tools/assetgen/props.py` with new simple
-  procedural props as needed, or drop in free/CC0 pack assets — per-asset choice,
-  see Phase 3 pivot note) for any rocks/flora/cottage-kit/paths not already covered
-  by the existing pine/fence/crate/jar/mug/ground-tile set
-- T4.2 Zone tooling (placement, MultiMesh scatter, zone schema)
+- T4.1 Environment placeholders ✅ done — cottage wall/corner/roof kit, planter,
+  well, grass tuft, flower, and rock added to `tools/assetgen/props.py`
+  (see `docs/superpowers/plans/2026-08-10-zone-tooling-environment-placeholders.md`)
+- T4.2 Zone tooling (placement, MultiMesh scatter, zone schema) ✅ done —
+  `Zone`/`PropPlacement`/`ScatterRegion`/`ZoneBuilder` in `src/world/`, proven
+  via the `cottage_garden` zone (`src/world/cottage_garden/`), budget-tested
+  against the 150k tri / 120 draw call zone ceiling
 - T4.3 Cottage interior + garden assembled
 - T4.4 Village + Hedgerow Lanes first dressing pass
 - T4.5 Time-of-day + weather-lite + clock service (Patch Day weekday math, drift hooks)
@@ -164,7 +166,7 @@ procedural approach, adapted to Godot's mesh/scene conventions.
 | 1 — Player & Camera | `phase/01-player-camera` | ✅ complete |
 | 2 — Character Foundation | `phase/02-character-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
 | 3 — Nature & Building Foundation | `phase/03-nature-building-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
-| 4 — World & Time | `phase/04-world` | ⏭️ next up (proceeds now on placeholders, see pivot spec) |
+| 4 — World & Time | `phase/04-world` | 🚧 in progress — T4.1/T4.2 done, T4.3–T4.5 next (proceeds on placeholders, see pivot spec) |
 | 5–12 | — | 📋 planned |
 
 At each gate: suites fully green, playable artifact, docs updated.
