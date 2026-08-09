@@ -1,5 +1,28 @@
 # tools/assetgen — Character Pipeline
 
+## Blender toolchain (characters only)
+
+Character generation (Wren, villager, future NPCs) requires **Blender 5.0+** on
+`PATH` as `blender`. Props/nature/buildings do not need Blender — they stay on the
+pure-Python pipeline.
+
+Install Blender from https://www.blender.org/download/ (or your OS package
+manager) and confirm it's on `PATH`:
+
+```bash
+blender --version   # must print "Blender 5.0" or higher
+```
+
+`python3 -m tools.assetgen.build` checks this automatically before attempting a
+character build and fails with a clear message (not a cryptic subprocess error) if
+Blender is missing or too old. See `tools/assetgen/blender/toolchain.py`.
+
+For live iteration on character meshes (watching changes in a running Blender
+window instead of the screenshot/re-import round trip), install the `blender-mcp`
+addon and start its server from within Blender; `tools/assetgen/blender/mcp_client.py`
+then talks to it over `127.0.0.1:9876`. This is a dev convenience only — it is
+never required for `make assets` to succeed.
+
 ## Adding a new part
 1. Write a builder function in `part_registry.py` returning a `MeshBuilder`
    (reuse `add_box`/`add_cylinder`/`add_lathe` from `mesh.py`).
