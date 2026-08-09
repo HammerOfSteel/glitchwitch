@@ -4,9 +4,21 @@ Tracks every known-needed character/nature/building asset so future asset phases
 have a backlog instead of guesswork. Populated per
 `docs/superpowers/specs/2026-08-08-character-procedural-pipeline-design.md`.
 
+**Sourcing pivot (2026-08-09):** see
+`docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md`. Rather than an
+in-house procedural pipeline generating every row below, the project owner will
+source final character art via Meshy AI (or similar) and final nature/building art
+via free/CC0 low-poly modular packs, as time allows per asset. Every "planned"
+character/nature/building row in this table is unblocked from that sourcing
+work by a placeholder for now — either the existing v1 procedural output
+(`tools/assetgen/character_gen.py`, `tools/assetgen/props.py`) or, for Wren, a
+rigged/animated Seren (Meshy AI) placeholder body. "Procedural" in the
+Rig/Anim/Dependencies columns below still describes the *placeholder's* origin,
+not a commitment to keep building it procedurally in-house.
+
 | Asset ID | Category | Subtype | Procedural/Handcrafted | Rig/Anim | Dependencies | Priority | Gameplay dependency | Status |
 |---|---|---|---|---|---|---|---|---|
-| wren | character | witch (player) | procedural | witch rig/anim contract | part_registry witch entries | P0 | Phase 1 player avatar | done |
+| wren | character | witch (player) | placeholder: Seren (Meshy AI) rigged/animated body | idle/walk/run clips (no wave/stir) | `tools/assetgen/placeholders/fetch_wren_placeholder.py` | P0 | Phase 1 player avatar | placeholder (external art pending) |
 | sigrid-barm | character | villager (baker) | procedural | villager rig/anim contract | part_registry villager entries | P1 | Phase 8 cast wave 1 | planned |
 | ansel-rowe | character | villager (postman) | procedural | villager rig/anim contract | part_registry villager entries | P1 | Phase 8 cast wave 1; The Last Route | planned |
 | maud-tressel | character | villager (elder) | procedural | villager rig/anim contract | part_registry villager entries | P1 | Phase 8; Echoes in the Wallpaper | planned |

@@ -35,6 +35,14 @@ Goal: a repo where every later phase is cheap — pipeline, tests, CI, and the l
 - T1.5 Witch avatar: procedural segmented character with code-authored clips
 
 ## Phase 2 — Character Foundation (`phase/02-character-foundation`)
+> **⏸️ Paused (pivot 2026-08-09):** in-house procedural/Blender character
+> generation is on hold — final character art is now sourced externally
+> (Meshy AI or similar), owner-driven, as time allows. Placeholders (v1
+> procedural Wren/villager + a Seren-derived rigged/animated Wren stand-in)
+> keep later phases unblocked in the meantime. Full rationale and placeholder
+> details: [`docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md`](docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md).
+> Original goal, kept for reference / possible future resumption:
+
 Goal: turn Wren from a hard-coded one-off into a deterministic, data-driven procedural
 character pipeline capable of producing the full village cast later, without ever
 touching a rigged/skinned mesh. Godot-native rebuild, informed by (not ported from)
@@ -44,25 +52,42 @@ the procedural character system in `HammerOfSteel/tomes_towers_and_transmutation
 
 - T2.1 Character spec schema + part library registry (`character_spec.py`,
   `part_registry.py`) — archetypes, seeded part-slot resolution, compatibility rules.
+  ✅ done (v1 procedural, still the live placeholder source)
 - T2.2 Rig contract + animation contract (`rig_contract.py`, `animation_contract.py`) —
   canonical slot → node mapping, mandatory baseline clip set, per-archetype geometry.
+  ✅ done (v1)
 - T2.3 Generator/assembler + validator (`character_gen.py`, `character_validate.py`) —
   spec-to-GLB pipeline, contract-violation errors, byte-determinism guarantee.
+  ✅ done (v1)
 - T2.4 Wren migration — her exact current look/rig/animations reproduced byte-identical
-  through the new pipeline; `build.py` updated to call the generator.
+  through the new pipeline; `build.py` updated to call the generator. ✅ done (v1);
+  Blender-backed v2 rebuild paused, see pivot note above
 - T2.5 Second archetype proof (e.g. `villager`) generated end-to-end + Asset Inventory
   Matrix (`docs/asset-inventory.md`) populated with every known character/nature/
-  building asset need. *Tests: rig/clip/budget validation, determinism, contract
-  version metadata in manifest.*
+  building asset need. ✅ done (v1 proof); matrix now annotated with the sourcing
+  pivot. *Tests: rig/clip/budget validation, determinism, contract version metadata
+  in manifest.*
 
 ## Phase 3 — Nature & Building Foundation (`phase/03-nature-building-foundation`)
-Goal: apply the same procedural-foundation discipline to environment assets — trees,
-rocks, flora, fences, and cottage/building kit pieces — informed by the referenced
-project's procedural approach, adapted to Godot's mesh/scene conventions. Scope and
-task breakdown to be specced when Phase 2 completes.
+> **⏸️ Paused (pivot 2026-08-09):** deferred in favor of sourcing free/CC0
+> low-poly modular packs for nature/building art, owner-driven, as time allows —
+> same rationale as Phase 2's pause. The existing v1 procedural prop set
+> (`tools/assetgen/props.py`: pine, fence, crate, jar, mug, ground tile) remains
+> the live environment placeholder (see `src/sandbox/glade.tscn`) and needs no
+> restoration. Extend it with cheap new procedural props, or drop in CC0 pack
+> assets, per-asset, whichever is faster — no new pipeline commitment. See
+> [`docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md`](docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md).
+
+Original goal, kept for reference / possible future resumption: apply the same
+procedural-foundation discipline to environment assets — trees, rocks, flora,
+fences, and cottage/building kit pieces — informed by the referenced project's
+procedural approach, adapted to Godot's mesh/scene conventions.
 
 ## Phase 4 — World & Time (`phase/04-world`)
-- T4.1 Environment generators v1 (trees, rocks, flora, fences, cottage kit, paths)
+- T4.1 Environment placeholders (extend `tools/assetgen/props.py` with new simple
+  procedural props as needed, or drop in free/CC0 pack assets — per-asset choice,
+  see Phase 3 pivot note) for any rocks/flora/cottage-kit/paths not already covered
+  by the existing pine/fence/crate/jar/mug/ground-tile set
 - T4.2 Zone tooling (placement, MultiMesh scatter, zone schema)
 - T4.3 Cottage interior + garden assembled
 - T4.4 Village + Hedgerow Lanes first dressing pass
@@ -137,8 +162,10 @@ task breakdown to be specced when Phase 2 completes.
 |---|---|---|
 | 0 — Foundation | `phase/00-foundation` | ✅ complete |
 | 1 — Player & Camera | `phase/01-player-camera` | ✅ complete |
-| 2 — Character Foundation | `phase/02-character-foundation` | ⏭️ next up |
-| 3–12 | — | 📋 planned |
+| 2 — Character Foundation | `phase/02-character-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
+| 3 — Nature & Building Foundation | `phase/03-nature-building-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
+| 4 — World & Time | `phase/04-world` | ⏭️ next up (proceeds now on placeholders, see pivot spec) |
+| 5–12 | — | 📋 planned |
 
 At each gate: suites fully green, playable artifact, docs updated.
 Gate records — Phase 0: 36 pytest + 11 gdUnit. Phase 1: 44 pytest + 57 gdUnit,

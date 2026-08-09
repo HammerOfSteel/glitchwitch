@@ -1,5 +1,13 @@
 # Character Pipeline v2 (Blender-Backed) Implementation Plan
 
+> **⏸️ PAUSED (2026-08-09):** Tasks 1–11 are committed and test-covered; Task 12
+> (orchestrator) has a known unresolved tri-budget failure (192,960 tris vs. the
+> 1,500 budget). The project pivoted to sourcing final character art externally
+> (Meshy AI / similar) instead of continuing to tune this in-house pipeline — see
+> `docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md`. Tasks 12–19
+> are on hold; nothing here is deleted and it may resume later if in-house
+> procedural generation becomes worthwhile again.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the v1 raw-triangle-math character pipeline with a Blender-backed

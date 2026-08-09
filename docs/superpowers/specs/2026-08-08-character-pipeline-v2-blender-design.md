@@ -1,6 +1,10 @@
 # Character Pipeline v2 — Blender-Backed Mesh Generation — Design Spec
 
-**Status:** Draft, pending user approval
+**Status:** Paused (2026-08-09) — see
+`docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md`. Tasks 1–11
+of the implementation plan are committed and test-covered; Task 12 has a known
+unresolved tri-budget failure. Character art generation moved to an external
+tool (Meshy AI / similar) for now; this pipeline may resume later.
 **Supersedes (for characters only):** parts of `docs/superpowers/specs/2026-08-08-character-procedural-pipeline-design.md`
 **Author context:** Glitch Witch (Godot 4, GL Compatibility renderer)
 

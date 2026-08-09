@@ -2,6 +2,7 @@
 .godot/
 *.translation
 export_credentials.cfg
+*.import
 
 # Build & generated output (rebuilt via tools/assetgen)
 assets/generated/
