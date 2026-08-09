@@ -34,6 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # temp filesystem). Reuses the same "artifacts/" gitignore entry as Chunk 1's
 # render-check scratch path.
 SCRATCH_DIR = REPO_ROOT / "artifacts" / "blender_test_drivers"
+SCRATCH_OUTPUT_DIR = REPO_ROOT / "artifacts" / "blender_test_outputs"
 
 
 def blender_available() -> bool:
@@ -46,6 +47,17 @@ def blender_available() -> bool:
 requires_blender = pytest.mark.skipif(
     not blender_available(), reason="blender executable not found or too old"
 )
+
+
+def scratch_output_path(suffix: str) -> Path:
+    """Return a fresh repo-local scratch file path for a test that needs to write
+    a real output file (e.g. an exported .glb), not a driver script. Uses the same
+    repo-local-not-system-temp convention as SCRATCH_DIR/run_in_blender, for the
+    same reason (the headless `blender` subprocess must be able to write here).
+    Caller is responsible for removing the file when the test finishes.
+    """
+    SCRATCH_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    return SCRATCH_OUTPUT_DIR / f"output_{uuid.uuid4().hex}{suffix}"
 
 
 def run_in_blender(driver_code: str, timeout: float = 120) -> dict:
