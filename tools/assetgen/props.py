@@ -167,7 +167,40 @@ def build_flower(seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_cottage_wall(_seed: int = 0) -> MeshBuilder:
+    """One 2m wall segment: timber frame plus a whitewashed infill panel."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 1.0, 0), (2.0, 2.0, 0.2), "cream", 2)
+    for x in (-0.95, 0.95):
+        add_box(builder, (x, 1.0, 0), (0.1, 2.0, 0.22), "bark", 1)
+    add_box(builder, (0, 1.95, 0), (2.0, 0.1, 0.22), "bark", 1)
+    add_box(builder, (0, 0.05, 0), (2.0, 0.1, 0.22), "bark", 1)
+    return builder
+
+
+def build_cottage_corner(_seed: int = 0) -> MeshBuilder:
+    """An L-shaped corner post joining two wall segments."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 1.0, 0), (0.2, 2.0, 0.2), "bark", 1)
+    add_box(builder, (0, 1.95, 0), (0.24, 0.1, 0.24), "bark", 2)
+    return builder
+
+
+def build_cottage_roof(_seed: int = 0) -> MeshBuilder:
+    """A flat two-panel roof placeholder (not actually pitched — both
+    panels sit at the same height side by side). Good enough to read as
+    "roof-shaped" from a distance; a true pitched/mitred ridge is left for
+    a later, non-placeholder pass."""
+    builder = MeshBuilder()
+    add_box(builder, (-0.55, 0.15, 0), (1.3, 0.1, 2.2), "honey", 2)
+    add_box(builder, (0.55, 0.15, 0), (1.3, 0.1, 2.2), "honey", 2)
+    return builder
+
+
 PROPS = {
+    "cottage_corner": build_cottage_corner,
+    "cottage_roof": build_cottage_roof,
+    "cottage_wall": build_cottage_wall,
     "crate": build_crate,
     "fence": build_fence,
     "flower": build_flower,
@@ -187,7 +220,7 @@ HERO_TRI_BUDGET = 1500
 
 # Props allowed to spend the hero budget instead of the regular one — kept
 # to a short, explicit list so budget creep needs a deliberate edit here.
-HERO_PROPS: set[str] = set()
+HERO_PROPS: set[str] = {"cottage_wall", "cottage_corner", "cottage_roof"}
 
 
 def build_prop(name: str, seed: int = 0) -> MeshBuilder:

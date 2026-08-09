@@ -158,3 +158,16 @@ def test_unknown_prop_raises():
 def test_scatter_props_export_as_single_primitive(name):
     doc = gltf.parse_glb(gltf.build_glb(props.build_prop(name, seed=0), name))["json"]
     assert len(doc["meshes"][0]["primitives"]) == 1
+
+
+@pytest.mark.parametrize("name", ["cottage_wall", "cottage_corner", "cottage_roof"])
+def test_cottage_kit_pieces_are_hero_props(name):
+    # These pieces opt into the higher HERO_TRI_BUDGET allowance (see
+    # HERO_PROPS in props.py) since a modular building kit has more surface
+    # detail than a single small prop. They don't need to actually exceed
+    # the regular TRI_BUDGET to justify the exception — the exception exists
+    # so kit pieces have headroom to gain detail later without a fresh budget
+    # negotiation, not because these specific placeholders demand it.
+    assert name in props.HERO_PROPS
+    builder = props.build_prop(name, seed=0)
+    assert 0 < builder.tri_count <= props.HERO_TRI_BUDGET
