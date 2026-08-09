@@ -21,3 +21,10 @@ func test_scatter_region_defaults() -> void:
 	assert_float(region.scale_min).is_equal(1.0)
 	assert_float(region.scale_max).is_equal(1.0)
 	assert_int(region.seed).is_equal(0)
+
+
+func test_zone_defaults() -> void:
+	var zone := Zone.new()
+	assert_vector(zone.ground_size).is_equal(Vector2.ZERO)
+	assert_array(zone.placements).is_empty()
+	assert_array(zone.scatter_regions).is_empty()
