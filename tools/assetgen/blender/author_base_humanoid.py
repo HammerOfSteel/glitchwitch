@@ -199,12 +199,43 @@ def add_smoothing_stack(obj: bpy.types.Object, mirror: bool = False) -> None:
         mirror_mod.use_clip = True
         mirror_mod.use_bisect_axis[0] = False
         bpy.ops.object.modifier_apply(modifier=mirror_mod.name)
+    bevel = obj.modifiers.new(name="Bevel", type="BEVEL")
+    bevel.width = DIMS["bevel_width"]
+    bevel.segments = DIMS["bevel_segments"]
+    bevel.limit_method = "ANGLE"
+    bpy.ops.object.modifier_apply(modifier=bevel.name)
+    subsurf = obj.modifiers.new(name="Subsurf", type="SUBSURF")
+    subsurf.levels = DIMS["subsurf_levels"]
+    subsurf.render_levels = DIMS["subsurf_levels"]
+    bpy.ops.object.modifier_apply(modifier=subsurf.name)
     for polygon in obj.data.polygons:
         polygon.use_smooth = True
 
 
 def apply_body_fusion(body: bpy.types.Object) -> None:
     set_object_active(body)
+    remesh = body.modifiers.new(name="Remesh", type="REMESH")
+    remesh.mode = "VOXEL"
+    remesh.voxel_size = 0.018
+    remesh.adaptivity = 0.0
+    bpy.ops.object.modifier_apply(modifier=remesh.name)
+
+    smooth = body.modifiers.new(name="Smooth", type="CORRECTIVE_SMOOTH")
+    smooth.factor = 0.35
+    smooth.iterations = 4
+    bpy.ops.object.modifier_apply(modifier=smooth.name)
+
+    bevel = body.modifiers.new(name="BodyBevel", type="BEVEL")
+    bevel.width = DIMS["bevel_width"] * 0.8
+    bevel.segments = DIMS["bevel_segments"]
+    bevel.limit_method = "ANGLE"
+    bpy.ops.object.modifier_apply(modifier=bevel.name)
+
+    subsurf = body.modifiers.new(name="BodySubsurf", type="SUBSURF")
+    subsurf.levels = DIMS["subsurf_levels"]
+    subsurf.render_levels = DIMS["subsurf_levels"]
+    bpy.ops.object.modifier_apply(modifier=subsurf.name)
+
     for polygon in body.data.polygons:
         polygon.use_smooth = True
 
