@@ -118,6 +118,19 @@ def build_rock(seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_well(_seed: int = 0) -> MeshBuilder:
+    """Small stone well — the cottage garden's water source."""
+    builder = MeshBuilder()
+    profile = [
+        (0.0, 0.0),
+        (0.35, 0.0),
+        (0.37, 0.5),
+        (0.35, 0.55),  # lip
+    ]
+    add_lathe(builder, profile, 12, "stone", 1, cap_start=True, cap_end=True)
+    return builder
+
+
 PROPS = {
     "crate": build_crate,
     "fence": build_fence,
@@ -127,6 +140,7 @@ PROPS = {
     "pine": build_pine,
     "planter": build_planter,
     "rock": build_rock,
+    "well": build_well,
 }
 
 TRI_BUDGET = 600
