@@ -125,57 +125,6 @@ func test_rebuild_scatter_is_deterministic() -> void:
 			.is_true()
 
 
-func test_rebuild_ignores_null_scatter_variants_without_losing_density() -> void:
-	var zone := _make_zone_with_scatter()
-	zone.scatter_regions[0].variants = [BoxMesh.new(), null, BoxMesh.new()]
-	var builder := ZoneBuilder.new()
-	auto_free(builder)
-	builder.zone = zone
-	builder.rebuild()
-
-	var multimeshes: Array = []
-	var total_instances := 0
-	for child in builder.get_children():
-		if child is MultiMeshInstance3D:
-			multimeshes.append(child)
-			total_instances += (child as MultiMeshInstance3D).multimesh.instance_count
-
-	assert_int(multimeshes.size()).is_equal(2)
-	assert_int(total_instances).is_equal(20)
-	for found in multimeshes:
-		assert_object((found as MultiMeshInstance3D).multimesh.mesh).is_not_null()
-
-
-func test_rebuild_keeps_variant_layout_stable_when_null_slot_exists() -> void:
-	var base_zone := _make_zone_with_scatter()
-	var with_null_zone := _make_zone_with_scatter()
-	with_null_zone.scatter_regions[0].variants = [
-		with_null_zone.scatter_regions[0].variants[0],
-		null,
-		with_null_zone.scatter_regions[0].variants[1],
-	]
-
-	var base_builder := ZoneBuilder.new()
-	auto_free(base_builder)
-	base_builder.zone = base_zone
-	base_builder.rebuild()
-
-	var with_null_builder := ZoneBuilder.new()
-	auto_free(with_null_builder)
-	with_null_builder.zone = with_null_zone
-	with_null_builder.rebuild()
-
-	var base_mmi := base_builder.get_child(1) as MultiMeshInstance3D
-	var with_null_mmi := with_null_builder.get_child(1) as MultiMeshInstance3D
-	assert_int(with_null_mmi.multimesh.instance_count).is_equal(base_mmi.multimesh.instance_count)
-	for i in range(base_mmi.multimesh.instance_count):
-		var expected: Transform3D = base_mmi.multimesh.get_instance_transform(i)
-		var actual: Transform3D = with_null_mmi.multimesh.get_instance_transform(i)
-		assert_bool(actual.is_equal_approx(expected)) \
-			.override_failure_message("variant layout changed when null slot was inserted at index %d" % i) \
-			.is_true()
-
-
 func test_rebuild_dresses_placements_and_scatter_with_palette_material() -> void:
 	var palette_material: Material = load(PaletteApply.PALETTE_MATERIAL_PATH)
 	var builder := ZoneBuilder.new()

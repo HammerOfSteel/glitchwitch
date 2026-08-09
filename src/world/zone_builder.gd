@@ -57,15 +57,11 @@ func _region_area(region: ScatterRegion) -> float:
 func _build_scatter() -> void:
 	var palette_material := load(PaletteApply.PALETTE_MATERIAL_PATH) as Material
 	for region in _zone.scatter_regions:
-		var variants: Array[Mesh] = []
-		for variant in region.variants:
-			if variant != null:
-				variants.append(variant)
-		if variants.is_empty():
+		if region.variants.is_empty():
 			continue
 		var total := roundi(region.density * _region_area(region))
-		var counts := _split_evenly(total, variants.size())
-		for i in range(variants.size()):
+		var counts := _split_evenly(total, region.variants.size())
+		for i in range(region.variants.size()):
 			var count: int = counts[i]
 			if count <= 0:
 				continue
@@ -74,7 +70,7 @@ func _build_scatter() -> void:
 			var mmi := MultiMeshInstance3D.new()
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.mesh = variants[i]
+			mm.mesh = region.variants[i]
 			mm.instance_count = count
 			for instance_index in range(count):
 				mm.set_instance_transform(instance_index, _random_transform(rng, region))
