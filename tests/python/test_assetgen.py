@@ -152,3 +152,9 @@ def test_pine_seed_variation_is_deterministic_per_seed():
 def test_unknown_prop_raises():
     with pytest.raises(KeyError):
         props.build_prop("dragon")
+
+
+@pytest.mark.parametrize("name", ["grass_tuft", "flower"])
+def test_scatter_props_export_as_single_primitive(name):
+    doc = gltf.parse_glb(gltf.build_glb(props.build_prop(name, seed=0), name))["json"]
+    assert len(doc["meshes"][0]["primitives"]) == 1

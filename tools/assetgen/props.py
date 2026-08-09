@@ -131,9 +131,47 @@ def build_well(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_grass_tuft(seed: int = 0) -> MeshBuilder:
+    """A few crossed blade quads — cheap enough to scatter densely."""
+    rng = random.Random(seed)
+    builder = MeshBuilder()
+    for i in range(3):
+        angle = (math.pi / 3.0) * i
+        height = rng.uniform(0.18, 0.28)
+        half_width = 0.05
+        dx = math.cos(angle) * half_width
+        dz = math.sin(angle) * half_width
+        builder.add_face(
+            [
+                (-dx, 0.0, -dz), (dx, 0.0, dz),
+                (dx, height, dz), (-dx, height, -dz),
+            ],
+            "moss", 2,
+        )
+    return builder
+
+
+def build_flower(seed: int = 0) -> MeshBuilder:
+    """A single small flower — stem plus a flat bloom quad."""
+    rng = random.Random(seed)
+    builder = MeshBuilder()
+    add_cylinder(builder, (0, 0.09, 0), 0.01, 0.18, 5, "moss", 1, cap_top=False)
+    bloom_shade = rng.choice([0, 1, 2])
+    builder.add_face(
+        [
+            (-0.05, 0.18, 0.0), (0.05, 0.18, 0.0),
+            (0.05, 0.18, 0.1), (-0.05, 0.18, 0.1),
+        ],
+        "honey", bloom_shade,
+    )
+    return builder
+
+
 PROPS = {
     "crate": build_crate,
     "fence": build_fence,
+    "flower": build_flower,
+    "grass_tuft": build_grass_tuft,
     "ground_tile": build_ground_tile,
     "jar": build_jar,
     "mug": build_mug,
