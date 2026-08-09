@@ -128,13 +128,25 @@ verb for a gentle shimmer + icon badge; it must ship alongside each verb, not la
 
 ## Asset pipeline (decision record)
 
-- `tools/assetgen` is **pure Python (stdlib only)**: mesh kit → GLB writer, palette →
-  PNG writer. Deterministic under fixed seeds; byte-hash tested. Rationale: zero heavy
-  dependencies in CI/sandbox, total reproducibility, fast iteration. (Blender remains an
-  optional future tool for character accessory work; it is not a build dependency.)
-- Characters: **procedural segmented rigid-part rigs** with code-authored glTF node
-  animations (see Wren in `tools/assetgen/character.py`) — one art language, zero binaries,
-  clips loop via Godot's "-loop" import convention. CC0 skinned bases (KayKit / Quaternius)
-  remain a documented fallback via `tools/bootstrap.py` if a character ever needs skinning.
-- Nothing binary is committed. `assets/generated/` and `assets/thirdparty/` are build
-  outputs, ignored by git, rebuilt by `make assets` / bootstrap.
+- `tools/assetgen` is **pure Python (stdlib only)** for props, nature, and building
+  assets: mesh kit → GLB writer, palette → PNG writer. Deterministic under fixed
+  seeds; byte-hash tested. Rationale: zero heavy dependencies in CI/sandbox, total
+  reproducibility, fast iteration.
+- **Characters are Blender-backed (revised policy, character-pipeline-v2):**
+  `tools/assetgen/blender/` drives a headless `blender --background --python`
+  invocation. **One committed binary source asset**,
+  `tools/assetgen/blender/base_humanoid.blend`, is the shared skinned body mesh —
+  this is a deliberate, scoped exception to "nothing binary is committed," not a
+  general policy change. Everything downstream of that file (proportions,
+  clothing, materials, animation, export) is scripted and deterministic given the
+  base file plus an archetype spec/seed. Blender 5.0+ becomes a required build-time
+  dependency whenever `make assets` (re)generates a character.
+- **CC0 skinned bases (KayKit / Quaternius)** remain the documented fallback — no
+  longer "instead of Blender," but *for the base mesh itself* if scripted `bpy`
+  topology authoring doesn't clear the acceptance bar in
+  `docs/superpowers/specs/2026-08-08-character-pipeline-v2-blender-design.md`.
+- `assets/generated/` and `assets/thirdparty/` remain build outputs, ignored by git,
+  rebuilt by `make assets` / bootstrap — this is unchanged. The one exception is the
+  committed `base_humanoid.blend` *source* asset itself, which lives under
+  `tools/assetgen/blender/` (alongside the code that consumes it), not under
+  `assets/generated/`.
