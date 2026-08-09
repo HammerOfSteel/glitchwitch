@@ -58,6 +58,12 @@ LOWER_LEG_RADIUS = UPPER_LEG_RADIUS * 0.88
 FOOT_WIDTH = DIMS["foot_length"] * 0.7
 FOOT_DEPTH = DIMS["foot_length"] * 1.15
 NECK_HEIGHT = 0.03
+NECK_RADIUS = HEAD_WIDTH * 0.17
+SHOULDER_SOCKET_RADIUS = UPPER_ARM_RADIUS * 1.2
+PELVIS_HEIGHT = DIMS["torso_height"] * 0.18
+ABDOMEN_HEIGHT = DIMS["torso_height"] * 0.22
+WAIST_RADIUS = DIMS["torso_width"] * 0.18
+JOINT_OVERLAP = 0.025
 SHOULDER_Z = FOOT_HEIGHT + DIMS["lower_leg_length"] + DIMS["upper_leg_length"] + DIMS["torso_height"] * 0.78 + TORSO_LIFT
 HIPS_Z = FOOT_HEIGHT + DIMS["lower_leg_length"] + DIMS["upper_leg_length"]
 HEAD_CENTER_Z = (
@@ -120,6 +126,21 @@ def cuboid(
             profile_shape_factor=0.0,
         )
     bmesh.ops.scale(bm, verts=bm.verts, vec=Vector((size[0] / 2.0, size[1] / 2.0, size[2] / 2.0)))
+    bmesh.ops.translate(bm, verts=bm.verts, vec=Vector(location))
+    return mesh_object_from_bmesh(name, bm)
+
+
+def soft_head(name: str, size: tuple[float, float, float], location: tuple[float, float, float]) -> bpy.types.Object:
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=2, radius=0.5)
+    for vert in bm.verts:
+        if vert.co.z < -0.12:
+            vert.co.z *= 0.9
+        if abs(vert.co.x) < 0.1:
+            vert.co.x *= 0.92
+        if abs(vert.co.y) < 0.1:
+            vert.co.y *= 0.94
+    bmesh.ops.scale(bm, verts=bm.verts, vec=Vector((size[0], size[1], size[2])))
     bmesh.ops.translate(bm, verts=bm.verts, vec=Vector(location))
     return mesh_object_from_bmesh(name, bm)
 
@@ -191,6 +212,34 @@ def add_smoothing_stack(obj: bpy.types.Object, mirror: bool = False) -> None:
         polygon.use_smooth = True
 
 
+def apply_body_fusion(body: bpy.types.Object) -> None:
+    set_object_active(body)
+    remesh = body.modifiers.new(name="Remesh", type="REMESH")
+    remesh.mode = "VOXEL"
+    remesh.voxel_size = 0.018
+    remesh.adaptivity = 0.0
+    bpy.ops.object.modifier_apply(modifier=remesh.name)
+
+    smooth = body.modifiers.new(name="Smooth", type="CORRECTIVE_SMOOTH")
+    smooth.factor = 0.35
+    smooth.iterations = 4
+    bpy.ops.object.modifier_apply(modifier=smooth.name)
+
+    bevel = body.modifiers.new(name="BodyBevel", type="BEVEL")
+    bevel.width = DIMS["bevel_width"] * 0.8
+    bevel.segments = DIMS["bevel_segments"]
+    bevel.limit_method = "ANGLE"
+    bpy.ops.object.modifier_apply(modifier=bevel.name)
+
+    subsurf = body.modifiers.new(name="BodySubsurf", type="SUBSURF")
+    subsurf.levels = DIMS["subsurf_levels"]
+    subsurf.render_levels = DIMS["subsurf_levels"]
+    bpy.ops.object.modifier_apply(modifier=subsurf.name)
+
+    for polygon in body.data.polygons:
+        polygon.use_smooth = True
+
+
 def ensure_uv_layer(obj: bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
     uv_layer = obj.data.uv_layers.get("UVMap")
     if uv_layer is None:
@@ -213,26 +262,79 @@ def build_body_parts() -> list[bpy.types.Object]:
         (0.0, 0.0, torso_center_z),
         vertical_cuts=1,
     )
-    head = cuboid(
+    head = soft_head(
         "head",
         (HEAD_WIDTH, HEAD_DEPTH, DIMS["head_height"]),
         (0.0, 0.0, HEAD_CENTER_Z),
+    )
+    neck = capsule_segment(
+        "neck",
+        Vector((0.0, 0.0, torso_center_z + (DIMS["torso_height"] / 2.0) - 0.01)),
+        Vector((0.0, 0.0, HEAD_CENTER_Z - (DIMS["head_height"] / 2.0) + JOINT_OVERLAP)),
+        NECK_RADIUS * 1.12,
+        NECK_RADIUS,
+        ring_cuts=1,
+    )
+    shoulder_socket = capsule_segment(
+        "shoulder_socket.R",
+        Vector((SHOULDER_X - JOINT_OVERLAP, 0.0, SHOULDER_Z + 0.01)),
+        Vector((SHOULDER_X + JOINT_OVERLAP, 0.0, SHOULDER_Z)),
+        SHOULDER_SOCKET_RADIUS,
+        UPPER_ARM_RADIUS,
+        ring_cuts=1,
+    )
+    pelvis = cuboid(
+        "pelvis",
+        (DIMS["hip_width"] * 0.95, TORSO_DEPTH * 0.92, PELVIS_HEIGHT),
+        (0.0, 0.0, HIPS_Z - (PELVIS_HEIGHT / 2.0) + 0.015),
         vertical_cuts=1,
     )
-    hand_z = SHOULDER_Z - (DIMS["upper_arm_length"] * math.cos(ARM_SWING)) - (DIMS["lower_arm_length"] * math.cos(ARM_SWING))
-    hand_x = SHOULDER_X + (DIMS["upper_arm_length"] * math.sin(ARM_SWING)) + (DIMS["lower_arm_length"] * math.sin(ARM_SWING))
+    abdomen = cuboid(
+        "abdomen",
+        (DIMS["torso_width"] * 0.78, TORSO_DEPTH * 0.74, ABDOMEN_HEIGHT),
+        (0.0, 0.0, HIPS_Z + (ABDOMEN_HEIGHT / 2.0) + 0.01),
+        vertical_cuts=1,
+    )
+    waist = capsule_segment(
+        "waist",
+        Vector((0.0, 0.0, HIPS_Z - 0.015)),
+        Vector((0.0, 0.0, torso_center_z - (DIMS["torso_height"] * 0.12))),
+        WAIST_RADIUS * 1.08,
+        WAIST_RADIUS,
+        ring_cuts=1,
+    )
+    crotch = cuboid(
+        "crotch",
+        (DIMS["hip_width"] * 0.52, TORSO_DEPTH * 0.55, PELVIS_HEIGHT * 1.35),
+        (0.0, 0.0, HIPS_Z - (PELVIS_HEIGHT * 0.85)),
+        vertical_cuts=1,
+    )
+
+    shoulder_anchor = Vector((SHOULDER_X - JOINT_OVERLAP, 0.0, SHOULDER_Z))
+    elbow_point = Vector((
+        SHOULDER_X + (DIMS["upper_arm_length"] * math.sin(ARM_SWING)),
+        0.0,
+        SHOULDER_Z - (DIMS["upper_arm_length"] * math.cos(ARM_SWING)),
+    ))
+    wrist_point = Vector((
+        SHOULDER_X + (DIMS["upper_arm_length"] + DIMS["lower_arm_length"]) * math.sin(ARM_SWING),
+        0.0,
+        SHOULDER_Z - (DIMS["upper_arm_length"] + DIMS["lower_arm_length"]) * math.cos(ARM_SWING),
+    ))
+    hand_z = wrist_point.z
+    hand_x = wrist_point.x
     upper_arm = capsule_segment(
         "upper_arm.R",
-        Vector((SHOULDER_X, 0.0, SHOULDER_Z)),
-        Vector((SHOULDER_X + DIMS["upper_arm_length"] * math.sin(ARM_SWING), 0.0, SHOULDER_Z - DIMS["upper_arm_length"] * math.cos(ARM_SWING))),
+        shoulder_anchor,
+        elbow_point + Vector((JOINT_OVERLAP * math.sin(ARM_SWING), 0.0, -JOINT_OVERLAP * math.cos(ARM_SWING))),
         UPPER_ARM_RADIUS,
         UPPER_ARM_RADIUS * 0.92,
         ring_cuts=2,
     )
     lower_arm = capsule_segment(
         "lower_arm.R",
-        Vector((SHOULDER_X + DIMS["upper_arm_length"] * math.sin(ARM_SWING), 0.0, SHOULDER_Z - DIMS["upper_arm_length"] * math.cos(ARM_SWING))),
-        Vector((hand_x, 0.0, hand_z)),
+        elbow_point - Vector((JOINT_OVERLAP * math.sin(ARM_SWING), 0.0, -JOINT_OVERLAP * math.cos(ARM_SWING))),
+        wrist_point + Vector((JOINT_OVERLAP * math.sin(ARM_SWING), 0.0, -JOINT_OVERLAP * math.cos(ARM_SWING))),
         LOWER_ARM_RADIUS,
         LOWER_ARM_RADIUS * 0.9,
         ring_cuts=2,
@@ -240,38 +342,53 @@ def build_body_parts() -> list[bpy.types.Object]:
     hand = cuboid(
         "hand.R",
         (DIMS["hand_length"] * 1.05, HAND_THICKNESS * 1.05, DIMS["hand_length"] * 0.56),
-        (hand_x + DIMS["hand_length"] * 0.18, 0.0, hand_z - 0.01),
+        (hand_x + DIMS["hand_length"] * 0.10, 0.0, hand_z - 0.01),
     )
     foot_center = Vector((HIP_X + 0.01, 0.0, FOOT_HEIGHT / 2.0))
+    hip_point = Vector((HIP_X, 0.0, HIPS_Z + 0.02))
+    knee_point = Vector((HIP_X + LEG_STANCE, 0.0, FOOT_HEIGHT + DIMS["lower_leg_length"]))
+    ankle_point = Vector((HIP_X + 0.01, 0.0, FOOT_HEIGHT + 0.01))
+    hip_to_knee = (knee_point - hip_point).normalized()
+    knee_to_ankle = (ankle_point - knee_point).normalized()
     upper_leg = capsule_segment(
         "upper_leg.R",
-        Vector((HIP_X, 0.0, HIPS_Z - 0.005)),
-        Vector((HIP_X + LEG_STANCE, 0.0, FOOT_HEIGHT + DIMS["lower_leg_length"])),
+        hip_point - (hip_to_knee * JOINT_OVERLAP * 0.8),
+        knee_point + (hip_to_knee * JOINT_OVERLAP * 1.2),
         UPPER_LEG_RADIUS,
         UPPER_LEG_RADIUS * 0.92,
         ring_cuts=2,
     )
     lower_leg = capsule_segment(
         "lower_leg.R",
-        Vector((HIP_X + LEG_STANCE, 0.0, FOOT_HEIGHT + DIMS["lower_leg_length"])),
-        Vector((HIP_X + 0.01, 0.0, FOOT_HEIGHT + 0.01)),
+        knee_point - (knee_to_ankle * JOINT_OVERLAP * 1.3),
+        ankle_point + (knee_to_ankle * JOINT_OVERLAP * 1.8),
         LOWER_LEG_RADIUS,
         LOWER_LEG_RADIUS * 0.95,
         ring_cuts=2,
     )
     foot = cuboid(
         "foot.R",
-        (FOOT_WIDTH, FOOT_DEPTH, FOOT_HEIGHT),
-        (foot_center.x + 0.012, FOOT_DEPTH * 0.32, foot_center.z),
+        (FOOT_WIDTH, FOOT_DEPTH, FOOT_HEIGHT + JOINT_OVERLAP * 2.2),
+        (foot_center.x + 0.012, FOOT_DEPTH * 0.32, foot_center.z + JOINT_OVERLAP * 0.9),
     )
     add_smoothing_stack(torso, mirror=False)
     add_smoothing_stack(head, mirror=False)
+    add_smoothing_stack(neck, mirror=False)
+    add_smoothing_stack(pelvis, mirror=False)
+    add_smoothing_stack(abdomen, mirror=False)
+    add_smoothing_stack(waist, mirror=False)
+    add_smoothing_stack(crotch, mirror=False)
     map_faces_to_palette_cell(torso, "cream", 2)
     map_faces_to_palette_cell(head, "cream", 3)
-    for obj in [upper_arm, lower_arm, hand, upper_leg, lower_leg, foot]:
+    map_faces_to_palette_cell(neck, "cream", 2)
+    map_faces_to_palette_cell(pelvis, "cream", 2)
+    map_faces_to_palette_cell(abdomen, "cream", 2)
+    map_faces_to_palette_cell(waist, "cream", 2)
+    map_faces_to_palette_cell(crotch, "cream", 2)
+    for obj in [shoulder_socket, upper_arm, lower_arm, hand, upper_leg, lower_leg, foot]:
         add_smoothing_stack(obj, mirror=True)
         map_faces_to_palette_cell(obj, "cream", 2)
-    return [torso, head, upper_arm, lower_arm, hand, upper_leg, lower_leg, foot]
+    return [torso, pelvis, abdomen, waist, crotch, neck, head, shoulder_socket, upper_arm, lower_arm, hand, upper_leg, lower_leg, foot]
 
 
 def join_body_parts(parts: list[bpy.types.Object]) -> bpy.types.Object:
@@ -283,6 +400,8 @@ def join_body_parts(parts: list[bpy.types.Object]) -> bpy.types.Object:
     body = bpy.context.view_layer.objects.active
     body.name = "body"
     body.data.name = "body_mesh"
+    apply_body_fusion(body)
+    map_faces_to_palette_cell(body, "cream", 2)
     return body
 
 
@@ -377,6 +496,60 @@ def parent_with_auto_weights(body: bpy.types.Object, armature_object: bpy.types.
     armature_object.select_set(True)
     bpy.context.view_layer.objects.active = armature_object
     bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+
+    if any(vertex.groups for vertex in body.data.vertices):
+        return
+
+    modifier = body.modifiers.get("Armature")
+    if modifier is None:
+        modifier = body.modifiers.new(name="Armature", type="ARMATURE")
+    modifier.object = armature_object
+    body.parent = armature_object
+
+    for group in list(body.vertex_groups):
+        body.vertex_groups.remove(group)
+
+    deform_bones = [
+        bone for bone in armature_object.data.bones
+        if bone.use_deform and not bone.name.startswith("ToeBase")
+    ]
+    vertex_groups = {bone.name: body.vertex_groups.new(name=bone.name) for bone in deform_bones}
+
+    def point_segment_distance(point: Vector, start: Vector, end: Vector) -> float:
+        segment = end - start
+        length_sq = segment.length_squared
+        if length_sq == 0:
+            return (point - start).length
+        factor = max(0.0, min(1.0, (point - start).dot(segment) / length_sq))
+        closest = start + (segment * factor)
+        return (point - closest).length
+
+    armature_world = armature_object.matrix_world
+    body_world = body.matrix_world
+    for vertex in body.data.vertices:
+        point = body_world @ vertex.co
+        ranked = []
+        for bone in deform_bones:
+            if bone.name.endswith(".L") and point.x > 0.02:
+                continue
+            if bone.name.endswith(".R") and point.x < -0.02:
+                continue
+            start = armature_world @ bone.head_local
+            end = armature_world @ bone.tail_local
+            distance = point_segment_distance(point, start, end)
+            bias = 1.0
+            if "." not in bone.name and abs(point.x) < 0.045:
+                bias = 1.25
+            ranked.append((distance / bias, bone.name))
+
+        ranked.sort(key=lambda item: item[0])
+        closest = ranked[:3]
+        weights = []
+        for distance, name in closest:
+            weights.append((name, 1.0 / max(distance, 0.001) ** 4))
+        total = sum(weight for _name, weight in weights) or 1.0
+        for name, weight in weights:
+            vertex_groups[name].add([vertex.index], weight / total, "REPLACE")
 
 
 def ensure_body_material(body: bpy.types.Object) -> None:
