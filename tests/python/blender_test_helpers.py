@@ -43,7 +43,6 @@ def blender_available() -> bool:
     except (toolchain.BlenderNotFoundError, toolchain.BlenderVersionTooOldError):
         return False
 
-
 requires_blender = pytest.mark.skipif(
     not blender_available(), reason="blender executable not found or too old"
 )
@@ -59,13 +58,15 @@ def run_in_blender(driver_code: str, timeout: float = 120) -> dict:
     SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
     driver_path = SCRATCH_DIR / f"driver_{uuid.uuid4().hex}.py"
     driver_path.write_text(driver_code)
+    blender_executable, blender_env = toolchain.blender_subprocess_config()
     try:
         proc = subprocess.run(
-            ["blender", "--background", "--python", str(driver_path)],
+            [blender_executable, "--background", "--python", str(driver_path)],
             capture_output=True,
             text=True,
             timeout=timeout,
             cwd=str(REPO_ROOT),
+            env=blender_env,
         )
     finally:
         driver_path.unlink(missing_ok=True)
