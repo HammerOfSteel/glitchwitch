@@ -273,7 +273,19 @@ def build_rug(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_bed(_seed: int = 0) -> MeshBuilder:
+    """Bed frame, mattress, and pillow blockout. A hero prop — the alcove's
+    focal furniture piece."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 0.25, 0), (1.0, 0.4, 1.9), "wood", 1)
+    add_box(builder, (0, 0.9, -0.9), (1.0, 0.7, 0.1), "wood", 2)
+    add_box(builder, (0, 0.5, 0.05), (0.94, 0.2, 1.7), "cream", 2, top=("cream", 3))
+    add_box(builder, (0, 0.66, -0.65), (0.7, 0.14, 0.32), "cream", 3)
+    return builder
+
+
 PROPS = {
+    "bed": build_bed,
     "chair": build_chair,
     "cottage_corner": build_cottage_corner,
     "cottage_roof": build_cottage_roof,
@@ -303,7 +315,7 @@ HERO_TRI_BUDGET = 1500
 
 # Props allowed to spend the hero budget instead of the regular one — kept
 # to a short, explicit list so budget creep needs a deliberate edit here.
-HERO_PROPS: set[str] = {"cottage_wall", "cottage_corner", "cottage_roof", "hearth"}
+HERO_PROPS: set[str] = {"cottage_wall", "cottage_corner", "cottage_roof", "hearth", "bed"}
 
 
 def build_prop(name: str, seed: int = 0) -> MeshBuilder:
