@@ -79,10 +79,12 @@ Existing props reused as-is: `jar`, `mug` (as shelf/table dressing).
   referencing the `.tres` above, plus `Player` and a ground/floor collider.
   The lighting/environment rig differs from `cottage_garden`'s (see below)
   rather than being copied from it.
-- **`cottage_interior.gd`** — root script mirrors `cottage_garden.gd` (spawns
-  the zone via `ZoneBuilder`; does not need to call `PaletteApply.apply(self)`
-  itself since `ZoneBuilder` already applies the palette to its own
-  instanced children).
+- **`cottage_interior.gd`** — root script mirrors `cottage_garden.gd`'s role:
+  it stages the scene's own lights (the hearth glow / window fill described
+  below) in `_ready()`. It does not spawn the zone itself — the
+  `%ZoneBuilder` node rebuilds its `PropPlacement` children on its own
+  `_ready()` — and does not need to call `PaletteApply.apply(self)`, since
+  `ZoneBuilder` already applies the palette to each prop instance it builds.
 
 ## Lighting rig
 
@@ -91,15 +93,20 @@ Existing props reused as-is: `jar`, `mug` (as shelf/table dressing).
 - A warm `OmniLight3D` positioned at the hearth (orange-tinted, moderate
   range/attenuation) as the scene's primary light source, creating a
   hearth-lit focal glow.
-- One subtle secondary light suggesting daylight through a window (a soft,
+- A subtle secondary light suggesting daylight through a window (a soft,
   cooler-tinted light near a wall) for gentle fill/contrast against the warm
-  hearth glow.
+  hearth glow. A simple window cutout (or window-frame prop) is placed in the
+  matching wall position so the light source has a visible in-world origin,
+  even though no exterior view or transition exists behind it yet.
 
 ## Testing & verification
 
-- `tests/python` — asset-generation unit tests for each new prop (geometry,
-  tri-budget compliance), following the same pattest pattern as existing
-  prop tests (e.g. `test_build_well`, `test_build_cottage_wall`).
+- `tests/python` — asset-generation unit tests for each new prop, following
+  the existing parameterized pattern in `tests/python/test_assetgen.py`
+  (`test_prop_builds_within_budget`, `test_prop_glb_is_deterministic`, etc. —
+  these already iterate over all of `props.PROPS`, so new props are covered
+  automatically; hero props also need adding to `HERO_PROPS` to be checked
+  against `HERO_TRI_BUDGET`).
 - `tests/unit/test_interior_budget.gd` (gdUnit) — mirrors
   `test_zone_budget.gd`: verifies the assembled interior Zone's total
   triangle count stays under a reasonable budget cap.
