@@ -308,6 +308,15 @@ def build_lane_path(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_signpost(_seed: int = 0) -> MeshBuilder:
+    """A single wayfinding post with two arm-planks near the top."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 0.6, 0), (0.1, 1.2, 0.1), "wood", 1, top=("wood", 2))
+    add_box(builder, (0.25, 1.0, 0), (0.5, 0.1, 0.06), "wood", 2)
+    add_box(builder, (-0.25, 0.85, 0), (0.5, 0.1, 0.06), "wood", 2)
+    return builder
+
+
 PROPS = {
     "bed": build_bed,
     "chair": build_chair,
@@ -331,6 +340,7 @@ PROPS = {
     "rock": build_rock,
     "rug": build_rug,
     "shelf": build_shelf,
+    "signpost": build_signpost,
     "stone_stile": build_stone_stile,
     "table": build_table,
     "well": build_well,
