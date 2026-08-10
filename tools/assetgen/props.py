@@ -205,6 +205,13 @@ def build_interior_wall(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_interior_floor(_seed: int = 0) -> MeshBuilder:
+    """2x2 m interior floor tile — wood plank boards."""
+    builder = MeshBuilder()
+    add_box(builder, (0, -0.05, 0), (2.0, 0.1, 2.0), "wood", 2, top=("wood", 3))
+    return builder
+
+
 PROPS = {
     "cottage_corner": build_cottage_corner,
     "cottage_roof": build_cottage_roof,
@@ -214,6 +221,7 @@ PROPS = {
     "flower": build_flower,
     "grass_tuft": build_grass_tuft,
     "ground_tile": build_ground_tile,
+    "interior_floor": build_interior_floor,
     "interior_wall": build_interior_wall,
     "jar": build_jar,
     "mug": build_mug,
