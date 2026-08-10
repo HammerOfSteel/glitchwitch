@@ -4,7 +4,7 @@
 
 **Goal:** Build a standalone, playable cottage interior zone (`cottage_interior.tscn`) — a hearth-lit main room plus an open bed alcove — reusing the existing `Zone`/`ZoneBuilder`/`PropPlacement` tooling and extending `tools/assetgen/props.py` with 8 new interior furniture/kit placeholder props.
 
-**Architecture:** New deterministic `MeshBuilder`-based prop generators (`interior_wall`, `interior_floor`, `hearth`, `table`, `chair`, `shelf`, `rug`, `bed`) are added to `tools/assetgen/props.py`, following the file's existing `add_box`/`add_lathe`/`add_face` conventions (`hearth` and `bed` opt into `HERO_TRI_BUDGET` as focal pieces). `cottage_interior.tres` is a hand-authored `Zone` resource — PropPlacements only, no `ScatterRegion` (nothing is scattered indoors) — describing an L-shaped room: a 6m×4m main room plus a 2m×2m open alcove in one corner, with 12 wall segments, 7 floor tiles, and hand-placed furniture. `cottage_interior.tscn` reuses the `ZoneBuilder` pattern from `cottage_garden.tscn` but replaces the sun/sky lighting rig with a new enclosed-space rig: dim ambient `WorldEnvironment`, a warm `OmniLight3D` at the hearth, and a cooler `OmniLight3D` at a deliberate gap left in one wall (the "window"). A gdUnit budget test mirrors `test_zone_budget.gd`. No scene-transition/door logic, no gameplay systems (pantry, Leaven, tea-mending) — pure environment art, matching how `cottage_garden` shipped.
+**Architecture:** New deterministic `MeshBuilder`-based prop generators (`interior_wall`, `interior_floor`, `hearth`, `table`, `chair`, `shelf`, `rug`, `bed`) are added to `tools/assetgen/props.py`, following the file's existing `add_box`/`add_lathe`/`add_face` conventions (`hearth` and `bed` opt into `HERO_TRI_BUDGET` as focal pieces). `cottage_interior.tres` is a hand-authored `Zone` resource — PropPlacements only, no `ScatterRegion` instances (nothing is scattered indoors, though the typed `scatter_regions` array still needs a `ScatterRegion` script reference to stay empty-but-well-typed) — describing an L-shaped room: a 6m×4m main room plus a 2m×2m open alcove in one corner, with 11 wall segments (one deliberately omitted for a window gap), 7 floor tiles, and hand-placed furniture. `cottage_interior.tscn` reuses the `ZoneBuilder` pattern from `cottage_garden.tscn` but replaces the sun/sky lighting rig with a new enclosed-space rig: dim ambient `WorldEnvironment`, a warm `OmniLight3D` at the hearth, and a cooler `OmniLight3D` at a deliberate gap left in one wall (the "window"). A gdUnit budget test mirrors `test_zone_budget.gd`. No scene-transition/door logic, no gameplay systems (pantry, Leaven, tea-mending) — pure environment art, matching how `cottage_garden` shipped.
 
 **Tech Stack:** Godot 4.7 / GDScript, gdUnit4 (GDScript tests), Python 3 + pytest (`tools/assetgen`), existing `PaletteApply` toon-material system, existing `Zone`/`ZoneBuilder` tooling.
 
@@ -507,13 +507,17 @@ tests from Tasks 1-8, passes. No new failures beyond that baseline count.
 
 This is hand-authored `.tres` text, the same way `cottage_garden.tres` was
 authored in the prior plan. Unlike `cottage_garden.tres`, **no
-`ScatterRegion` is needed** — every interior prop is hand-placed, so this
-step has no risky "extract a Mesh sub-resource from a GLB" concern and can
-be written directly as text, no editor session required.
+`ScatterRegion` instances are needed** — every interior prop is
+hand-placed, so this step has no risky "extract a Mesh sub-resource from a
+GLB" concern and can be written directly as text, no editor session
+required. (The `scatter_regions` field is still a typed `Array[ScatterRegion]`
+per `zone.gd`, so the `.tres` still needs a `ScatterRegion` script
+`ext_resource` entry to declare a well-formed empty array — see the
+snippet below.)
 
 Layout (world space, matching the design spec's "6m×4m main room + 2m×2m
-open alcove" — an L-shaped room with 12 wall segments, 7 floor tiles, and
-furniture):
+open alcove" — an L-shaped room with 11 wall segments (one deliberately
+omitted for the window gap), 7 floor tiles, and furniture):
 
 - Main room footprint: X from -3 to 3, Z from -2 to 2 (6m × 4m).
 - Alcove footprint: X from 1 to 3, Z from 2 to 4 (2m × 2m), open to the main
@@ -525,200 +529,210 @@ furniture):
   - West wall (X=-3, main room height): z = -1, 1
   - North wall, main-room portion only (Z=2, stops at the alcove opening):
     x = -2, 0
-  - East wall, continuous across main room + alcove (X=3): z = -1, 1, 3
+  - East wall, continuous across main room + alcove (X=3): z = -1, 3 (the
+    `z = 1` segment is intentionally omitted — see the window gap note below)
   - Alcove north wall (Z=4): x = 2
   - Alcove west wall (X=1, alcove height only — this is the alcove's own
     outer wall, not a partition from the main room): z = 3
   - **Deliberate window gap:** the east wall's `z = 1` segment is *omitted*
     on purpose — this is the "window" opening the design spec calls for, lit
     by the `WindowLight` added in Task 11. No window-frame prop exists in
-    this pass; the gap itself is the placeholder. (This does mean that one
-    square meter of the east wall is fully open — acceptable for this
-    standalone, non-connected placeholder scene.)
+    this pass; the gap itself is the placeholder. (This does mean a 2m wide
+    × 2.4m tall — about 4.8 square meters — opening in the east wall is
+    fully open — acceptable for this standalone, non-connected placeholder
+    scene.)
 - Floor tiles (`interior_floor`, each 2m×2m, placed at its center): main room
   needs 6 tiles (x, z) = (-2,-1), (0,-1), (2,-1), (-2,1), (0,1), (2,1); alcove
   needs 1 tile at (2, 3).
 - Furniture:
-  - `hearth` at (0, 0, -1.7), against the south wall.
+  - `hearth` at (0, 0, -1.675), against the south wall (hearth's base is
+    0.9m×1.0m footprint centered on its origin, half-depth 0.5m; the south
+    wall's inner face sits at z=-1.925, so this leaves a hairline gap
+    instead of clipping through the wall mesh).
   - `table` at (0, 0, 0.3), center of the main room.
-  - `chair` at (0, 0, 1.0), facing the table.
+  - `chair` at (0, 0, 1.0), `rotation_degrees.y = 180` so it faces the table.
   - `shelf` at (-2.85, 0, -1), `rotation_degrees.y = 90`, against the west
     wall.
-  - `jar` at (-2.85, 1.3, -1.2) and `mug` at (-2.85, 1.3, -0.8), dressing the
-    shelf's top board (reusing the existing `jar`/`mug` props, per the
-    spec).
+  - `jar` at (-2.75, 1.32, -1.2) and `mug` at (-2.75, 1.32, -0.8), dressing
+    the shelf's top board (the top board is centered at local y=1.3 with
+    0.04m thickness, so its top surface sits at y=1.32; jar/mug both rest
+    with their base at local y=0, so placing them at y=1.32 sets them
+    exactly on the board surface; x=-2.75 keeps them clear of the shelf's
+    back panel once the 90° rotation is applied, reusing the existing
+    `jar`/`mug` props per the spec).
   - `rug` at (0, 0, 0.3), under the table.
   - `bed` at (2, 0, 3), in the alcove.
 
 - [ ] **Step 1: Write the file**
 
 ```
-[gd_resource type="Resource" script_class="Zone" load_steps=27 format=3]
+[gd_resource type="Resource" script_class="Zone" format=4]
 
 [ext_resource type="Script" path="res://src/world/zone.gd" id="1_zone"]
 [ext_resource type="Script" path="res://src/world/prop_placement.gd" id="2_placement"]
-[ext_resource type="PackedScene" path="res://assets/generated/interior_wall.glb" id="3_wall"]
-[ext_resource type="PackedScene" path="res://assets/generated/interior_floor.glb" id="4_floor"]
-[ext_resource type="PackedScene" path="res://assets/generated/hearth.glb" id="5_hearth"]
-[ext_resource type="PackedScene" path="res://assets/generated/table.glb" id="6_table"]
-[ext_resource type="PackedScene" path="res://assets/generated/chair.glb" id="7_chair"]
-[ext_resource type="PackedScene" path="res://assets/generated/shelf.glb" id="8_shelf"]
-[ext_resource type="PackedScene" path="res://assets/generated/jar.glb" id="9_jar"]
-[ext_resource type="PackedScene" path="res://assets/generated/mug.glb" id="10_mug"]
-[ext_resource type="PackedScene" path="res://assets/generated/rug.glb" id="11_rug"]
-[ext_resource type="PackedScene" path="res://assets/generated/bed.glb" id="12_bed"]
+[ext_resource type="Script" path="res://src/world/scatter_region.gd" id="3_scatter"]
+[ext_resource type="PackedScene" path="res://assets/generated/interior_wall.glb" id="4_wall"]
+[ext_resource type="PackedScene" path="res://assets/generated/interior_floor.glb" id="5_floor"]
+[ext_resource type="PackedScene" path="res://assets/generated/hearth.glb" id="6_hearth"]
+[ext_resource type="PackedScene" path="res://assets/generated/table.glb" id="7_table"]
+[ext_resource type="PackedScene" path="res://assets/generated/chair.glb" id="8_chair"]
+[ext_resource type="PackedScene" path="res://assets/generated/shelf.glb" id="9_shelf"]
+[ext_resource type="PackedScene" path="res://assets/generated/jar.glb" id="10_jar"]
+[ext_resource type="PackedScene" path="res://assets/generated/mug.glb" id="11_mug"]
+[ext_resource type="PackedScene" path="res://assets/generated/rug.glb" id="12_rug"]
+[ext_resource type="PackedScene" path="res://assets/generated/bed.glb" id="13_bed"]
 
 [sub_resource type="Resource" id="Wall_s1"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(-2, 0, -2)
 
 [sub_resource type="Resource" id="Wall_s2"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(0, 0, -2)
 
 [sub_resource type="Resource" id="Wall_s3"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(2, 0, -2)
 
 [sub_resource type="Resource" id="Wall_w1"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(-3, 0, -1)
 rotation_degrees = Vector3(0, 90, 0)
 
 [sub_resource type="Resource" id="Wall_w2"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(-3, 0, 1)
 rotation_degrees = Vector3(0, 90, 0)
 
 [sub_resource type="Resource" id="Wall_n1"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(-2, 0, 2)
 
 [sub_resource type="Resource" id="Wall_n2"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(0, 0, 2)
 
 [sub_resource type="Resource" id="Wall_e1"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(3, 0, -1)
 rotation_degrees = Vector3(0, 90, 0)
 
 [sub_resource type="Resource" id="Wall_e3"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(3, 0, 3)
 rotation_degrees = Vector3(0, 90, 0)
 
 [sub_resource type="Resource" id="Wall_alcove_n"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(2, 0, 4)
 
 [sub_resource type="Resource" id="Wall_alcove_w"]
 script = ExtResource("2_placement")
-scene = ExtResource("3_wall")
+scene = ExtResource("4_wall")
 position = Vector3(1, 0, 3)
 rotation_degrees = Vector3(0, 90, 0)
 
 [sub_resource type="Resource" id="Floor_1"]
 script = ExtResource("2_placement")
-scene = ExtResource("4_floor")
+scene = ExtResource("5_floor")
 position = Vector3(-2, 0, -1)
 
 [sub_resource type="Resource" id="Floor_2"]
 script = ExtResource("2_placement")
-scene = ExtResource("4_floor")
+scene = ExtResource("5_floor")
 position = Vector3(0, 0, -1)
 
 [sub_resource type="Resource" id="Floor_3"]
 script = ExtResource("2_placement")
-scene = ExtResource("4_floor")
+scene = ExtResource("5_floor")
 position = Vector3(2, 0, -1)
 
 [sub_resource type="Resource" id="Floor_4"]
 script = ExtResource("2_placement")
-scene = ExtResource("4_floor")
+scene = ExtResource("5_floor")
 position = Vector3(-2, 0, 1)
 
 [sub_resource type="Resource" id="Floor_5"]
 script = ExtResource("2_placement")
-scene = ExtResource("4_floor")
+scene = ExtResource("5_floor")
 position = Vector3(0, 0, 1)
 
 [sub_resource type="Resource" id="Floor_6"]
 script = ExtResource("2_placement")
-scene = ExtResource("4_floor")
+scene = ExtResource("5_floor")
 position = Vector3(2, 0, 1)
 
 [sub_resource type="Resource" id="Floor_alcove"]
 script = ExtResource("2_placement")
-scene = ExtResource("4_floor")
+scene = ExtResource("5_floor")
 position = Vector3(2, 0, 3)
 
 [sub_resource type="Resource" id="Placement_hearth"]
 script = ExtResource("2_placement")
-scene = ExtResource("5_hearth")
-position = Vector3(0, 0, -1.7)
+scene = ExtResource("6_hearth")
+position = Vector3(0, 0, -1.675)
 
 [sub_resource type="Resource" id="Placement_table"]
 script = ExtResource("2_placement")
-scene = ExtResource("6_table")
+scene = ExtResource("7_table")
 position = Vector3(0, 0, 0.3)
 
 [sub_resource type="Resource" id="Placement_chair"]
 script = ExtResource("2_placement")
-scene = ExtResource("7_chair")
+scene = ExtResource("8_chair")
 position = Vector3(0, 0, 1.0)
+rotation_degrees = Vector3(0, 180, 0)
 
 [sub_resource type="Resource" id="Placement_shelf"]
 script = ExtResource("2_placement")
-scene = ExtResource("8_shelf")
+scene = ExtResource("9_shelf")
 position = Vector3(-2.85, 0, -1)
 rotation_degrees = Vector3(0, 90, 0)
 
 [sub_resource type="Resource" id="Placement_jar"]
 script = ExtResource("2_placement")
-scene = ExtResource("9_jar")
-position = Vector3(-2.85, 1.3, -1.2)
+scene = ExtResource("10_jar")
+position = Vector3(-2.75, 1.32, -1.2)
 
 [sub_resource type="Resource" id="Placement_mug"]
 script = ExtResource("2_placement")
-scene = ExtResource("10_mug")
-position = Vector3(-2.85, 1.3, -0.8)
+scene = ExtResource("11_mug")
+position = Vector3(-2.75, 1.32, -0.8)
 
 [sub_resource type="Resource" id="Placement_rug"]
 script = ExtResource("2_placement")
-scene = ExtResource("11_rug")
+scene = ExtResource("12_rug")
 position = Vector3(0, 0, 0.3)
 
 [sub_resource type="Resource" id="Placement_bed"]
 script = ExtResource("2_placement")
-scene = ExtResource("12_bed")
+scene = ExtResource("13_bed")
 position = Vector3(2, 0, 3)
 
 [resource]
 script = ExtResource("1_zone")
-ground_size = Vector2(8, 8)
+ground_size = Vector2(6, 6)
 placements = Array[ExtResource("2_placement")]([SubResource("Wall_s1"), SubResource("Wall_s2"), SubResource("Wall_s3"), SubResource("Wall_w1"), SubResource("Wall_w2"), SubResource("Wall_n1"), SubResource("Wall_n2"), SubResource("Wall_e1"), SubResource("Wall_e3"), SubResource("Wall_alcove_n"), SubResource("Wall_alcove_w"), SubResource("Floor_1"), SubResource("Floor_2"), SubResource("Floor_3"), SubResource("Floor_4"), SubResource("Floor_5"), SubResource("Floor_6"), SubResource("Floor_alcove"), SubResource("Placement_hearth"), SubResource("Placement_table"), SubResource("Placement_chair"), SubResource("Placement_shelf"), SubResource("Placement_jar"), SubResource("Placement_mug"), SubResource("Placement_rug"), SubResource("Placement_bed")])
-scatter_regions = Array[ExtResource("2_placement")]([])
+scatter_regions = Array[ExtResource("3_scatter")]([])
 ```
 
-> Note: `scatter_regions`'s typed-array `ExtResource` in the empty-array
-> literal should reference `ScatterRegion`'s script, not `PropPlacement`'s —
-> check `cottage_garden.tres`'s exact empty-array syntax for
-> `scatter_regions` (it needs its own `[ext_resource type="Script"
-> path="res://src/world/scatter_region.gd" ...]` entry even though no
-> `ScatterRegion` sub-resources are created, purely so the typed empty array
-> literal is well-formed). Add that `ext_resource` line and reference it in
-> the empty array instead of `2_placement` in the final line.
+`ground_size = Vector2(6, 6)` matches the actual bounding footprint (X
+-3..3, Z -2..4 both span 6m); it's used for the ground collider/mesh sizing,
+not a hard clip, so the alcove's floor tile at Z=3 is still fully inside it.
+`format=4` and the absence of `load_steps` match `cottage_garden.tres`'s
+real syntax exactly — Godot recomputes `load_steps` itself and older
+`format=3` files use a different (deprecated) resource syntax, so this
+project's convention is `format=4` with no explicit `load_steps` field.
 
 - [ ] **Step 2: Sanity-check the resource loads**
 
@@ -820,9 +834,9 @@ environment/lighting differs entirely) and add:
   = 2` (Color), `ambient_light_color = Color(0.35, 0.32, 0.4, 1)`,
   `ambient_light_energy = 0.25`, `fog_enabled = false`, `tonemap_mode = 3`
   (match the existing tonemap convention from `glade.tscn`/`cottage_garden.tscn`).
-- `HearthLight` (`OmniLight3D`) at `Transform3D` position `(0, 1.3, -1.7)` —
-  matching the hearth's `PropPlacement` position, raised to light-source
-  height.
+- `HearthLight` (`OmniLight3D`) at `Transform3D` position `(0, 1.3, -1.675)`
+  — matching the hearth's `PropPlacement` position (Task 10), raised to
+  light-source height.
 - `WindowLight` (`OmniLight3D`) at `Transform3D` position `(3, 1.5, 1)` —
   matching the deliberate wall gap from Task 10.
 - `GroundCollider` (`StaticBody3D` + `CollisionShape3D`/`BoxShape3D`),
@@ -980,9 +994,10 @@ T4.1/T4.2 entries above it:
   (see `docs/superpowers/plans/2026-08-11-cottage-interior.md`)
 ```
 
-Update the Status table's Phase 4 row/notes if it currently lists T4.3 as
-outstanding, consistent with how the T4.1/T4.2 completion was reflected
-there in the prior plan's Task 15.
+Update the Status table's Phase 4 row (currently reads `🚧 in progress —
+T4.1/T4.2 done, T4.3–T4.5 next (proceeds on placeholders, see pivot spec)`)
+to `🚧 in progress — T4.1–T4.3 done, T4.4–T4.5 next (proceeds on
+placeholders, see pivot spec)`.
 
 - [ ] **Step 2: Update `docs/asset-inventory.md`**
 
@@ -991,21 +1006,22 @@ column format (`Asset ID | Category | Subtype | Procedural/Handcrafted |
 Rig/Anim | Dependencies | Priority | Gameplay dependency | Status`), e.g.:
 
 ```
-| interior-wall | nature | building kit (interior) | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 cottage interior | done |
-| interior-floor | nature | building kit (interior) | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 cottage interior | done |
-| hearth | nature | furniture (hero) | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 cottage interior | done |
-| table | nature | furniture | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 cottage interior | done |
-| chair | nature | furniture | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 cottage interior | done |
-| shelf | nature | furniture | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 cottage interior | done |
-| rug | nature | furniture | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 cottage interior | done |
-| bed | nature | furniture (hero) | procedural (existing assetgen prop) | n/a | tools/assetgen/props.py | P0 | Phase 4 cottage interior | done |
+| interior-wall | building | interior wall kit piece | procedural placeholder | n/a | tools/assetgen/props.py (`build_interior_wall`) | P0 | Phase 4 cottage interior | done |
+| interior-floor | building | interior floor tile kit piece | procedural placeholder | n/a | tools/assetgen/props.py (`build_interior_floor`) | P0 | Phase 4 cottage interior | done |
+| hearth | building | stone hearth (hero prop) | procedural placeholder | n/a | tools/assetgen/props.py (`build_hearth`) | P0 | Phase 4 cottage interior | done |
+| table | building | wood dining table | procedural placeholder | n/a | tools/assetgen/props.py (`build_table`) | P0 | Phase 4 cottage interior | done |
+| chair | building | wood chair | procedural placeholder | n/a | tools/assetgen/props.py (`build_chair`) | P0 | Phase 4 cottage interior | done |
+| shelf | building | wall shelf with boards | procedural placeholder | n/a | tools/assetgen/props.py (`build_shelf`) | P0 | Phase 4 cottage interior | done |
+| rug | building | floor rug decal quad | procedural placeholder | n/a | tools/assetgen/props.py (`build_rug`) | P0 | Phase 4 cottage interior | done |
+| bed | building | alcove bed (hero prop) | procedural placeholder | n/a | tools/assetgen/props.py (`build_bed`) | P0 | Phase 4 cottage interior | done |
 ```
 
-(Match the exact category/style conventions already used for the
+(This matches the exact category/style conventions used for the
 `cottage-kit`/`well`/`grass-tuft` rows added in the prior plan's Task 15 —
-check that section of the table directly before writing these, and adjust
-category/subtype wording to match established precedent rather than
-inventing new ones.)
+`building` category for structural/furniture kit pieces, `procedural
+placeholder` for the Procedural/Handcrafted column, and
+`tools/assetgen/props.py (\`build_x\`)` with the specific function name in
+the Dependencies column.)
 
 - [ ] **Step 3: Commit**
 
