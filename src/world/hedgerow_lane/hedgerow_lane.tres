@@ -1,0 +1,104 @@
+[gd_resource type="Resource" script_class="Zone" format=4]
+
+[ext_resource type="Script" path="res://src/world/zone.gd" id="1_zone"]
+[ext_resource type="Script" path="res://src/world/prop_placement.gd" id="2_placement"]
+[ext_resource type="Script" path="res://src/world/scatter_region.gd" id="3_scatter"]
+[ext_resource type="PackedScene" path="res://assets/generated/lane_path.glb" id="4_path"]
+[ext_resource type="PackedScene" path="res://assets/generated/hedge.glb" id="5_hedge"]
+[ext_resource type="PackedScene" path="res://assets/generated/stone_stile.glb" id="6_stile"]
+[ext_resource type="PackedScene" path="res://assets/generated/signpost.glb" id="7_signpost"]
+
+[sub_resource type="Resource" id="Path_1"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_path")
+position = Vector3(0, 0, 4)
+
+[sub_resource type="Resource" id="Path_2"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_path")
+position = Vector3(0, 0, 2)
+
+[sub_resource type="Resource" id="Path_3"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_path")
+position = Vector3(0, 0, 0)
+
+[sub_resource type="Resource" id="Path_4"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_path")
+position = Vector3(0, 0, -2)
+
+[sub_resource type="Resource" id="Path_5"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_path")
+position = Vector3(0, 0, -4)
+
+[sub_resource type="Resource" id="Hedge_w1"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_hedge")
+position = Vector3(1.25, 0, 4)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Hedge_w2"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_hedge")
+position = Vector3(1.25, 0, 2)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Hedge_w3"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_hedge")
+position = Vector3(1.25, 0, 0)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Hedge_w4"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_hedge")
+position = Vector3(1.25, 0, -2)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Hedge_w5"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_hedge")
+position = Vector3(1.25, 0, -4)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Hedge_e1"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_hedge")
+position = Vector3(-1.25, 0, 4)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Hedge_e2"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_hedge")
+position = Vector3(-1.25, 0, 2)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Hedge_e4"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_hedge")
+position = Vector3(-1.25, 0, -2)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Hedge_e5"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_hedge")
+position = Vector3(-1.25, 0, -4)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Placement_stile"]
+script = ExtResource("2_placement")
+scene = ExtResource("6_stile")
+position = Vector3(-1.25, 0, 0)
+
+[sub_resource type="Resource" id="Placement_signpost"]
+script = ExtResource("2_placement")
+scene = ExtResource("7_signpost")
+position = Vector3(-1.8, 0, 4.5)
+
+[resource]
+script = ExtResource("1_zone")
+ground_size = Vector2(10, 4)
+placements = Array[ExtResource("2_placement")]([SubResource("Path_1"), SubResource("Path_2"), SubResource("Path_3"), SubResource("Path_4"), SubResource("Path_5"), SubResource("Hedge_w1"), SubResource("Hedge_w2"), SubResource("Hedge_w3"), SubResource("Hedge_w4"), SubResource("Hedge_w5"), SubResource("Hedge_e1"), SubResource("Hedge_e2"), SubResource("Hedge_e4"), SubResource("Hedge_e5"), SubResource("Placement_stile"), SubResource("Placement_signpost")])
+scatter_regions = Array[ExtResource("3_scatter")]([])
