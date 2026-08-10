@@ -212,6 +212,25 @@ def build_interior_floor(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_hearth(_seed: int = 0) -> MeshBuilder:
+    """Stone fireplace: base block with a dark firebox decal and an ember
+    glow accent quad (decals, not a carved recess — add_box can't
+    subtract). A hero prop — the interior's lighting focal point."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 0.5, 0), (0.9, 1.0, 0.5), "stone", 1, top=("stone", 2))
+    builder.add_face(
+        [(-0.28, 0.08, 0.251), (0.28, 0.08, 0.251),
+         (0.28, 0.55, 0.251), (-0.28, 0.55, 0.251)],
+        "stone", 0,
+    )
+    builder.add_face(
+        [(-0.18, 0.1, 0.252), (0.18, 0.1, 0.252),
+         (0.18, 0.4, 0.252), (-0.18, 0.4, 0.252)],
+        "honey", 3,
+    )
+    return builder
+
+
 PROPS = {
     "cottage_corner": build_cottage_corner,
     "cottage_roof": build_cottage_roof,
@@ -221,6 +240,7 @@ PROPS = {
     "flower": build_flower,
     "grass_tuft": build_grass_tuft,
     "ground_tile": build_ground_tile,
+    "hearth": build_hearth,
     "interior_floor": build_interior_floor,
     "interior_wall": build_interior_wall,
     "jar": build_jar,
@@ -237,7 +257,7 @@ HERO_TRI_BUDGET = 1500
 
 # Props allowed to spend the hero budget instead of the regular one — kept
 # to a short, explicit list so budget creep needs a deliberate edit here.
-HERO_PROPS: set[str] = {"cottage_wall", "cottage_corner", "cottage_roof"}
+HERO_PROPS: set[str] = {"cottage_wall", "cottage_corner", "cottage_roof", "hearth"}
 
 
 def build_prop(name: str, seed: int = 0) -> MeshBuilder:
