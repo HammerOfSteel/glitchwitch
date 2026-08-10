@@ -58,17 +58,21 @@ Following the established prop-building conventions (`MeshBuilder`
 `add_box`/`add_face` helpers, toon palette-ramp shading, regular
 `TRI_BUDGET = 600`; none of these are hero props):
 
-- **`hedge`** — a chunky moss-green box, roughly 1.2m (long) × 0.9m (tall) ×
-  0.5m (deep), reusing the `"moss"` palette cell already used by
-  `build_ground_tile`'s top face. One segment per placement, laid end-to-end
-  along the lane like `fence` segments.
+- **`hedge`** — a chunky moss-green box, roughly **2.0m (long)** × 0.9m
+  (tall) × 0.5m (deep) — sized to match `lane_path`'s 2m tile length so one
+  hedge segment lines up with one lane tile — reusing the `"moss"` palette
+  cell already used by `build_ground_tile`'s top face. One segment per
+  placement, laid end-to-end along the lane like `fence` segments.
 - **`stone_stile`** — two low stone step blocks (one on each side of a hedge
   line) with a low horizontal crossbar between them, using the `"stone"`
   palette family already established by `build_well`. Represents a
-  step-over crossing point through a hedge row.
+  step-over crossing point through a hedge row. Sized to occupy the same
+  ~2.0m-long slot as one `hedge` segment, so it can directly **replace** one
+  hedge segment in the row (not sit alongside an extra one).
 - **`lane_path`** — a 2×2m ground tile, structurally like
-  `build_ground_tile` (a shallow box with a flat top face) but with a
-  dirt/stone top color instead of moss, so the lane path reads visually
+  `build_ground_tile` (a shallow box with a flat top face) but with the
+  `"clay"` palette family (already defined in `tools/assetgen/palette.py`)
+  on the top face instead of `"moss"`, so the lane path reads visually
   distinct from grass. Placed end-to-end like `ground_tile`/
   `interior_floor` to form the walkable lane surface.
 - **`signpost`** — a single wood post with one or two small plank "arms"
@@ -87,43 +91,60 @@ none need special-casing beyond that — no new `HERO_PROPS` entries, no new
 Mirrors `cottage_interior`'s file structure:
 
 - **`hedgerow_lane.tres`** — a straight lane along the Z axis, five
-  `lane_path` tiles placed end-to-end (2m each, ~10m total length × 2m
-  wide), flanked by rows of `hedge` segments along both long edges (roughly
-  five segments per side, matching the lane's length). One `stone_stile`
-  placed at the lane's midpoint on one hedge row (marking a crossing point).
-  One `signpost` placed near one end of the lane, just off the path.
-  `ground_size` sized to the lane's footprint (~10m × 2m plus hedge margins).
+  `lane_path` tiles placed end-to-end (2m each, exactly 10m total length ×
+  2m wide), flanked by rows of hedge-line segments along both long edges, using
+  `+X` as the west edge and `-X` as the east edge, `+Z` as north and `-Z`
+  as south:
+  **the west edge (`+X`)** gets 5 `hedge` segments, one per lane_path
+  tile (slots 1–5, north to south); **the east edge (`-X`)** gets 4
+  `hedge` segments in slots 1, 2, 4, 5, plus one `stone_stile` in **slot 3
+  (the middle slot)**, so the stile replaces a hedge segment at the lane's
+  midpoint rather than adding an extra placement. One `signpost` placed at
+  the **north end (`+Z`)**, just off the east verge, beside lane_path slot
+  1. Total `PropPlacement` count: 5 (`lane_path`) + 5 (`hedge`, west edge)
+  + 4 (`hedge`, east edge) + 1 (`stone_stile`) + 1 (`signpost`) = **16**.
+  This exact count of 16 is what the smoke test in Testing & docs below
+  asserts; the slot layout itself (west/east edges, stile in slot 3,
+  signpost at the north end) is what the implementation plan should place
+  verbatim, even though the smoke test only checks the total count, not
+  per-slot placement.
+  `ground_size` sized to the lane's footprint (10m × 2m plus hedge margins).
   No `scatter_regions` (empty typed array, same `.tres` syntax convention as
   `cottage_interior.tres` — `format=4`, no `load_steps`, real `ext_resource`
   backing any typed-empty-array script reference).
 - **`hedgerow_lane.tscn`** — WorldEnvironment configured for outdoor use
-  (sky background/ambient source, matching `cottage_garden.tscn`'s values —
-  not the interior's dark/no-sky rig), a directional light (sun) if
-  `cottage_garden` uses one, `ZoneBuilder`, `Player`, `GroundCollider` sized
-  to the lane's footprint.
-- **`hedgerow_lane.gd`** — no staging script planned; `cottage_garden` has
-  none and this zone has no special lighting rig to stage (unlike the
-  interior's hearth/window lights). Add one only if a concrete need emerges
-  during implementation.
+  (sky background/ambient source, matching `cottage_garden.tscn`'s
+  `background_mode = 2` / `ambient_light_source = 3`), plus `Sun` and `Fill`
+  `DirectionalLight3D` nodes exactly like `cottage_garden.tscn`,
+  `ZoneBuilder`, `Player`, `GroundCollider` sized to the lane's footprint.
+- **`hedgerow_lane.gd`** — mirrors `cottage_garden.gd`'s `_stage()` exactly:
+  looks up `Sun`/`Fill` by name and applies the same rotation/color/energy
+  staging (`cottage_garden` DOES have this staging script — confirmed by
+  reading `src/world/cottage_garden/cottage_garden.gd`). No new staging
+  logic needed beyond replicating this existing pattern.
 
 ## Testing & docs
 
 - Extend `tests/python/test_assetgen.py`'s hardcoded
   `test_closed_props_have_positive_volume` parametrize list with `hedge`,
   `stone_stile`, `lane_path`, `signpost` (all four are closed volumes).
-- New `tests/unit/test_hedgerow_lane.gd` — smoke test asserting the exact
-  total `PropPlacement` count under `%ZoneBuilder`, mirroring
-  `test_cottage_interior.gd`.
+- New `tests/unit/test_hedgerow_lane.gd` — smoke test asserting exactly
+  **16** children under `%ZoneBuilder` (5 `lane_path` + 5 `hedge` + 4
+  `hedge` + 1 `stone_stile` + 1 `signpost`, per the Zone layout section
+  above), mirroring `test_cottage_interior.gd`'s 26-count assertion.
 - New `tests/unit/test_lane_budget.gd` — tri-count/draw-call budget test
   against the same 150k tri / 120 draw call ceiling, mirroring
   `test_zone_budget.gd`/`test_interior_budget.gd`.
 - Update `ROADMAP.md`: mark T4.4 done with a short description, matching
   T4.3's done-line format.
 - Update `docs/asset-inventory.md`: 4 new rows for `hedge` (category
-  `nature`), `stone_stile` (category `building`), `lane_path` (category
-  `building`), `signpost` (category `building`), all `procedural
-  placeholder`, dependencies formatted as
-  `tools/assetgen/props.py (\`build_x\`)`, matching the T4.3 rows exactly.
+  `nature`), `stone-stile` (category `building`), `lane-path` (category
+  `building`), `signpost` (category `building`) — asset IDs hyphenated per
+  the table's existing convention (e.g. `interior-floor`, `cottage-wall`),
+  all `procedural placeholder`, dependencies formatted as
+  `tools/assetgen/props.py (\`build_x\`)` using the underscored Python
+  function name (e.g. `tools/assetgen/props.py (\`build_stone_stile\`)`),
+  matching the T4.3 rows exactly.
 
 ## Success criteria
 
