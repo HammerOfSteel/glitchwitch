@@ -284,6 +284,13 @@ def build_bed(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_hedge(_seed: int = 0) -> MeshBuilder:
+    """One 2m hedge segment: a chunky moss-green box lining the lane."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 0.45, 0), (2.0, 0.9, 0.5), "moss", 1, top=("moss", 2))
+    return builder
+
+
 PROPS = {
     "bed": build_bed,
     "chair": build_chair,
@@ -296,6 +303,7 @@ PROPS = {
     "grass_tuft": build_grass_tuft,
     "ground_tile": build_ground_tile,
     "hearth": build_hearth,
+    "hedge": build_hedge,
     "interior_floor": build_interior_floor,
     "interior_wall": build_interior_wall,
     "jar": build_jar,
