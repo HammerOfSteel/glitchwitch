@@ -262,6 +262,17 @@ def build_shelf(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_rug(_seed: int = 0) -> MeshBuilder:
+    """Flat woven rug — a single ground-hugging quad, facing up."""
+    builder = MeshBuilder()
+    builder.add_face(
+        [(-0.9, 0.005, -0.6), (-0.9, 0.005, 0.6),
+         (0.9, 0.005, 0.6), (0.9, 0.005, -0.6)],
+        "rust", 2,
+    )
+    return builder
+
+
 PROPS = {
     "chair": build_chair,
     "cottage_corner": build_cottage_corner,
@@ -280,6 +291,7 @@ PROPS = {
     "pine": build_pine,
     "planter": build_planter,
     "rock": build_rock,
+    "rug": build_rug,
     "shelf": build_shelf,
     "table": build_table,
     "well": build_well,
