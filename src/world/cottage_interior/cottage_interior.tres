@@ -1,0 +1,158 @@
+[gd_resource type="Resource" script_class="Zone" format=4]
+
+[ext_resource type="Script" path="res://src/world/zone.gd" id="1_zone"]
+[ext_resource type="Script" path="res://src/world/prop_placement.gd" id="2_placement"]
+[ext_resource type="Script" path="res://src/world/scatter_region.gd" id="3_scatter"]
+[ext_resource type="PackedScene" path="res://assets/generated/interior_wall.glb" id="4_wall"]
+[ext_resource type="PackedScene" path="res://assets/generated/interior_floor.glb" id="5_floor"]
+[ext_resource type="PackedScene" path="res://assets/generated/hearth.glb" id="6_hearth"]
+[ext_resource type="PackedScene" path="res://assets/generated/table.glb" id="7_table"]
+[ext_resource type="PackedScene" path="res://assets/generated/chair.glb" id="8_chair"]
+[ext_resource type="PackedScene" path="res://assets/generated/shelf.glb" id="9_shelf"]
+[ext_resource type="PackedScene" path="res://assets/generated/jar.glb" id="10_jar"]
+[ext_resource type="PackedScene" path="res://assets/generated/mug.glb" id="11_mug"]
+[ext_resource type="PackedScene" path="res://assets/generated/rug.glb" id="12_rug"]
+[ext_resource type="PackedScene" path="res://assets/generated/bed.glb" id="13_bed"]
+
+[sub_resource type="Resource" id="Wall_s1"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(-2, 0, -2)
+
+[sub_resource type="Resource" id="Wall_s2"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(0, 0, -2)
+
+[sub_resource type="Resource" id="Wall_s3"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(2, 0, -2)
+
+[sub_resource type="Resource" id="Wall_w1"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(-3, 0, -1)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Wall_w2"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(-3, 0, 1)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Wall_n1"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(-2, 0, 2)
+
+[sub_resource type="Resource" id="Wall_n2"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(0, 0, 2)
+
+[sub_resource type="Resource" id="Wall_e1"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(3, 0, -1)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Wall_e3"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(3, 0, 3)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Wall_alcove_n"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(2, 0, 4)
+
+[sub_resource type="Resource" id="Wall_alcove_w"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_wall")
+position = Vector3(1, 0, 3)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Floor_1"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_floor")
+position = Vector3(-2, 0, -1)
+
+[sub_resource type="Resource" id="Floor_2"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_floor")
+position = Vector3(0, 0, -1)
+
+[sub_resource type="Resource" id="Floor_3"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_floor")
+position = Vector3(2, 0, -1)
+
+[sub_resource type="Resource" id="Floor_4"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_floor")
+position = Vector3(-2, 0, 1)
+
+[sub_resource type="Resource" id="Floor_5"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_floor")
+position = Vector3(0, 0, 1)
+
+[sub_resource type="Resource" id="Floor_6"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_floor")
+position = Vector3(2, 0, 1)
+
+[sub_resource type="Resource" id="Floor_alcove"]
+script = ExtResource("2_placement")
+scene = ExtResource("5_floor")
+position = Vector3(2, 0, 3)
+
+[sub_resource type="Resource" id="Placement_hearth"]
+script = ExtResource("2_placement")
+scene = ExtResource("6_hearth")
+position = Vector3(0, 0, -1.675)
+
+[sub_resource type="Resource" id="Placement_table"]
+script = ExtResource("2_placement")
+scene = ExtResource("7_table")
+position = Vector3(0, 0, 0.3)
+
+[sub_resource type="Resource" id="Placement_chair"]
+script = ExtResource("2_placement")
+scene = ExtResource("8_chair")
+position = Vector3(0, 0, 1.0)
+rotation_degrees = Vector3(0, 180, 0)
+
+[sub_resource type="Resource" id="Placement_shelf"]
+script = ExtResource("2_placement")
+scene = ExtResource("9_shelf")
+position = Vector3(-2.85, 0, -1)
+rotation_degrees = Vector3(0, 90, 0)
+
+[sub_resource type="Resource" id="Placement_jar"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_jar")
+position = Vector3(-2.75, 1.32, -1.2)
+
+[sub_resource type="Resource" id="Placement_mug"]
+script = ExtResource("2_placement")
+scene = ExtResource("11_mug")
+position = Vector3(-2.75, 1.32, -0.8)
+
+[sub_resource type="Resource" id="Placement_rug"]
+script = ExtResource("2_placement")
+scene = ExtResource("12_rug")
+position = Vector3(0, 0, 0.3)
+
+[sub_resource type="Resource" id="Placement_bed"]
+script = ExtResource("2_placement")
+scene = ExtResource("13_bed")
+position = Vector3(2, 0, 3)
+
+[resource]
+script = ExtResource("1_zone")
+ground_size = Vector2(6, 6)
+placements = Array[ExtResource("2_placement")]([SubResource("Wall_s1"), SubResource("Wall_s2"), SubResource("Wall_s3"), SubResource("Wall_w1"), SubResource("Wall_w2"), SubResource("Wall_n1"), SubResource("Wall_n2"), SubResource("Wall_e1"), SubResource("Wall_e3"), SubResource("Wall_alcove_n"), SubResource("Wall_alcove_w"), SubResource("Floor_1"), SubResource("Floor_2"), SubResource("Floor_3"), SubResource("Floor_4"), SubResource("Floor_5"), SubResource("Floor_6"), SubResource("Floor_alcove"), SubResource("Placement_hearth"), SubResource("Placement_table"), SubResource("Placement_chair"), SubResource("Placement_shelf"), SubResource("Placement_jar"), SubResource("Placement_mug"), SubResource("Placement_rug"), SubResource("Placement_bed")])
+scatter_regions = Array[ExtResource("3_scatter")]([])
