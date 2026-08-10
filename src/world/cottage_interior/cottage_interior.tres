@@ -18,61 +18,72 @@
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(-2, 0, -2)
+solid = true
 
 [sub_resource type="Resource" id="Wall_s2"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(0, 0, -2)
+solid = true
 
 [sub_resource type="Resource" id="Wall_s3"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(2, 0, -2)
+solid = true
 
 [sub_resource type="Resource" id="Wall_w1"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(-3, 0, -1)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Wall_w2"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(-3, 0, 1)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Wall_n1"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(-2, 0, 2)
+solid = true
 
 [sub_resource type="Resource" id="Wall_n2"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(0, 0, 2)
+solid = true
 
 [sub_resource type="Resource" id="Wall_e1"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(3, 0, -1)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Wall_e3"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(3, 0, 3)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Wall_alcove_n"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(2, 0, 4)
+solid = true
 
 [sub_resource type="Resource" id="Wall_alcove_w"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(1, 0, 3)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Floor_1"]
 script = ExtResource("2_placement")
