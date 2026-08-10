@@ -50,3 +50,11 @@ not a commitment to keep building it procedurally in-house.
 | rock | nature | scatter/discrete rock | procedural placeholder | n/a | tools/assetgen/props.py (`build_rock`) | P1 | Phase 4 environment v1 | done |
 | grass-tuft | nature | scatter grass patch prop | procedural placeholder | n/a | tools/assetgen/props.py (`build_grass_tuft`) | P1 | Phase 4 environment v1 | done |
 | flower | nature | scatter flower prop | procedural placeholder | n/a | tools/assetgen/props.py (`build_flower`) | P1 | Phase 4 environment v1 | done |
+| interior-wall | building | interior wall kit piece | procedural placeholder | n/a | tools/assetgen/props.py (`build_interior_wall`) | P0 | Phase 4 cottage interior | done |
+| interior-floor | building | interior floor tile kit piece | procedural placeholder | n/a | tools/assetgen/props.py (`build_interior_floor`) | P0 | Phase 4 cottage interior | done |
+| hearth | building | stone hearth (hero prop) | procedural placeholder | n/a | tools/assetgen/props.py (`build_hearth`) | P0 | Phase 4 cottage interior | done |
+| table | building | wood dining table | procedural placeholder | n/a | tools/assetgen/props.py (`build_table`) | P0 | Phase 4 cottage interior | done |
+| chair | building | wood chair | procedural placeholder | n/a | tools/assetgen/props.py (`build_chair`) | P0 | Phase 4 cottage interior | done |
+| shelf | building | wall shelf with boards | procedural placeholder | n/a | tools/assetgen/props.py (`build_shelf`) | P0 | Phase 4 cottage interior | done |
+| rug | building | floor rug decal quad | procedural placeholder | n/a | tools/assetgen/props.py (`build_rug`) | P0 | Phase 4 cottage interior | done |
+| bed | building | alcove bed (hero prop) | procedural placeholder | n/a | tools/assetgen/props.py (`build_bed`) | P0 | Phase 4 cottage interior | done |

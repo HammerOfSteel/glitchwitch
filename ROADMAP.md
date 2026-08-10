@@ -91,7 +91,12 @@ procedural approach, adapted to Godot's mesh/scene conventions.
   `Zone`/`PropPlacement`/`ScatterRegion`/`ZoneBuilder` in `src/world/`, proven
   via the `cottage_garden` zone (`src/world/cottage_garden/`), budget-tested
   against the 150k tri / 120 draw call zone ceiling
-- T4.3 Cottage interior + garden assembled
+- T4.3 Cottage interior + garden assembled ✅ done — `cottage_interior`
+  zone (`src/world/cottage_interior/`): hearth-lit main room + open bed
+  alcove, 8 new placeholder props (interior wall/floor kit, hearth, table,
+  chair, shelf, rug, bed), budget-tested against the same 150k tri / 120
+  draw call ceiling as `cottage_garden`
+  (see `docs/superpowers/plans/2026-08-11-cottage-interior.md`)
 - T4.4 Village + Hedgerow Lanes first dressing pass
 - T4.5 Time-of-day + weather-lite + clock service (Patch Day weekday math, drift hooks)
 
@@ -166,7 +171,7 @@ procedural approach, adapted to Godot's mesh/scene conventions.
 | 1 — Player & Camera | `phase/01-player-camera` | ✅ complete |
 | 2 — Character Foundation | `phase/02-character-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
 | 3 — Nature & Building Foundation | `phase/03-nature-building-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
-| 4 — World & Time | `phase/04-world` | 🚧 in progress — T4.1/T4.2 done, T4.3–T4.5 next (proceeds on placeholders, see pivot spec) |
+| 4 — World & Time | `phase/04-world` | 🚧 in progress — T4.1–T4.3 done, T4.4–T4.5 next (proceeds on placeholders, see pivot spec) |
 | 5–12 | — | 📋 planned |
 
 At each gate: suites fully green, playable artifact, docs updated.
