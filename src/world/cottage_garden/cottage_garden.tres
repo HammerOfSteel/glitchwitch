@@ -9,22 +9,28 @@
 [ext_resource type="PackedScene" path="res://assets/generated/planter.glb" id="7_planter"]
 [ext_resource type="PackedScene" path="res://assets/generated/well.glb" id="8_well"]
 [ext_resource type="PackedScene" path="res://assets/generated/fence.glb" id="9_fence"]
+[ext_resource type="PackedScene" path="res://assets/generated/ground_tile.glb" id="10_ground"]
+[ext_resource type="ArrayMesh" path="res://assets/generated/grass_tuft_mesh.tres" id="11_grass_mesh"]
+[ext_resource type="ArrayMesh" path="res://assets/generated/flower_mesh.tres" id="12_flower_mesh"]
 
 [sub_resource type="Resource" id="Placement_wall_n"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(0, 0, -2)
+solid = true
 
 [sub_resource type="Resource" id="Placement_wall_e"]
 script = ExtResource("2_placement")
 scene = ExtResource("4_wall")
 position = Vector3(2, 0, 0)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Placement_corner_ne"]
 script = ExtResource("2_placement")
 scene = ExtResource("5_corner")
 position = Vector3(2, 0, -2)
+solid = true
 
 [sub_resource type="Resource" id="Placement_roof"]
 script = ExtResource("2_placement")
@@ -46,80 +52,98 @@ script = ExtResource("2_placement")
 scene = ExtResource("9_fence")
 position = Vector3(-3, 0, -1)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Placement_fence_2"]
 script = ExtResource("2_placement")
 scene = ExtResource("9_fence")
 position = Vector3(-3, 0, 0)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5th2u"]
+[sub_resource type="Resource" id="Placement_ground_1"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, -3)
 
-[sub_resource type="ArrayMesh" id="ArrayMesh_xw3ux"]
-_surfaces = [{
-"aabb": AABB(-0.05, 0, -0.0433, 0.1, 0.26444, 0.0866),
-"format": 34359742465,
-"index_count": 18,
-"index_data": PackedByteArray("AAABAAIAAAADAAEABAAFAAYABAAHAAUACAAJAAoACAALAAkA"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 12,
-"vertex_data": PackedByteArray("zcxMvQAAAAAAAACAzcxMPa5khz4AAAAAzcxMPQAAAAAAAAAAzcxMva5khz4AAACAzczMvAAAAABXWzG9zczMPDj4gj5XWzE9zczMPAAAAABXWzE9zczMvDj4gj5XWzG9zczMPAAAAABXWzG9zczMvLJjYz5XWzE9zczMvAAAAABXWzE9zczMPLJjYz5XWzG9")
-}]
-blend_shape_mode = 0
+[sub_resource type="Resource" id="Placement_ground_2"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, -1)
 
-[sub_resource type="ArrayMesh" id="ArrayMesh_xjahw"]
-resource_name = "grass_tuft_grass_tuft"
-_surfaces = [{
-"aabb": AABB(-0.05, 0, -0.0433, 0.1, 0.26444, 0.0866),
-"attribute_data": PackedByteArray("AACgPrvSUj4AAKA+u9JSPgAAoD670lI+AACgPrvSUj4AAKA+u9JSPgAAoD670lI+AACgPrvSUj4AAKA+u9JSPgAAoD670lI+AACgPrvSUj4AAKA+u9JSPgAAoD670lI+"),
-"format": 34359742487,
-"index_count": 18,
-"index_data": PackedByteArray("AAABAAIAAAADAAEABAAFAAYABAAHAAUACAAJAAoACAALAAkA"),
-"material": SubResource("StandardMaterial3D_5th2u"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 12,
-"vertex_data": PackedByteArray("zcxMvQAAAAAAAACAzcxMPa5khz4AAAAAzcxMPQAAAAAAAAAAzcxMva5khz4AAACAzczMvAAAAABXWzG9zczMPDj4gj5XWzE9zczMPAAAAABXWzE9zczMvDj4gj5XWzG9zczMPAAAAABXWzG9zczMvLJjYz5XWzE9zczMvAAAAABXWzE9zczMPLJjYz5XWzG9/3//f////z//f/9/////P/9//3////8//3//f////z/ZLv9/////P9ku/3////8/2S7/f////z/ZLv9/////PwAA2a7///+/AADZrv///78AANmu////vwAA2a7///+/")
-}]
-blend_shape_mode = 0
-shadow_mesh = SubResource("ArrayMesh_xw3ux")
+[sub_resource type="Resource" id="Placement_ground_3"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, 1)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q8mll"]
+[sub_resource type="Resource" id="Placement_ground_4"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, 3)
 
-[sub_resource type="ArrayMesh" id="ArrayMesh_pt1yc"]
-_surfaces = [{
-"aabb": AABB(-0.05, 0, -0.00951, 0.1, 0.18, 0.109510005),
-"format": 34359742465,
-"index_count": 51,
-"index_data": PackedByteArray("AAABAAIAAAADAAEAAwAEAAEABQAAAAIABQACAAYABwADAAAABwAAAAUAAwAIAAQABwAIAAMACAAJAAQABwAFAAoABwAKAAgACgAFAAYACAAKAAkACgAGAAkACwAMAA0ACwAOAAwA"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 15,
-"vertex_data": PackedByteArray("CtcjPAAAAAAAAAAAmYFKO+xROD7Vzxs8CtcjPOxROD4AAAAAmYFKOwAAAADVzxs864sEvOxROD4ErcA7mYFKOwAAAADVzxu8mYFKO+xROD7Vzxu8AAAAAAAAAAAAAAAA64sEvAAAAAAErcA764sEvOxROD4ErcC764sEvAAAAAAErcC7zcxMvexROD7NzMw9zcxMPexROD4AAAAAzcxMPexROD7NzMw9zcxMvexROD4AAAAA")
-}]
-blend_shape_mode = 0
+[sub_resource type="Resource" id="Placement_ground_5"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-1, 0, -3)
 
-[sub_resource type="ArrayMesh" id="ArrayMesh_g77p3"]
-resource_name = "flower_flower"
-_surfaces = [{
-"aabb": AABB(-0.05, 0, -0.00951, 0.1, 0.18, 0.109510005),
-"attribute_data": PackedByteArray("AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD670lI+AABAPrvSUj4AAEA+u9JSPgAAQD40LS0/AABAPjQtLT8AAEA+NC0tPwAAQD40LS0/"),
-"format": 34359742487,
-"index_count": 51,
-"index_data": PackedByteArray("AAABAAIAAAADAAEABAAFAAYABAAHAAUACAAJAAoACAALAAkADAANAA4ADAAPAA0AEAARABIAEAATABEAFAAVABYAFwAYABkAGgAbABwAHQAeAB8AIAAhACIAIwAkACUAIwAmACQA"),
-"material": SubResource("StandardMaterial3D_q8mll"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 39,
-"vertex_data": PackedByteArray("CtcjPAAAAAAAAAAAmYFKO+xROD7Vzxs8CtcjPOxROD4AAAAAmYFKOwAAAADVzxs8mYFKOwAAAADVzxs864sEvOxROD4ErcA7mYFKO+xROD7Vzxs864sEvAAAAAAErcA764sEvAAAAAAErcA764sEvOxROD4ErcC764sEvOxROD4ErcA764sEvAAAAAAErcC764sEvAAAAAAErcC7mYFKO+xROD7Vzxu864sEvOxROD4ErcC7mYFKOwAAAADVzxu8mYFKOwAAAADVzxu8CtcjPOxROD4AAAAAmYFKO+xROD7Vzxu8CtcjPAAAAAAAAAAAAAAAAAAAAAAAAAAAmYFKOwAAAADVzxs8CtcjPAAAAAAAAAAAAAAAAAAAAAAAAAAA64sEvAAAAAAErcA7mYFKOwAAAADVzxs8AAAAAAAAAAAAAAAA64sEvAAAAAAErcC764sEvAAAAAAErcA7AAAAAAAAAAAAAAAAmYFKOwAAAADVzxu864sEvAAAAAAErcC7AAAAAAAAAAAAAAAACtcjPAAAAAAAAAAAmYFKOwAAAADVzxu8zcxMvexROD7NzMw9zcxMPexROD4AAAAAzcxMPexROD7NzMw9zcxMvexROD4AAAAAIsr/f////z8iyv9/////PyLK/3////8/Isr/f////z+bYP9/////P5tg/3////8/m2D/f////z+bYP9/////PwAA/3////+/AAD/f////78AAP9/////vwAA/3////+/AACb4P///78AAJvg////vwAAm+D///+/AACb4P///7///9y1////v///3LX///+////ctf///7///9y1////v/9/AAD///+//38AAP///7//fwAA////v/9/AAD///+//38AAP///7//fwAA////v/9/AAD///+//38AAP///7//fwAA////v/9/AAD///+//38AAP///7//fwAA////v/9/AAD///+//38AAP///7//fwAA////v/9///////+//3///////7//f///////v/9///////+/")
-}]
-blend_shape_mode = 0
-shadow_mesh = SubResource("ArrayMesh_pt1yc")
+[sub_resource type="Resource" id="Placement_ground_6"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-1, 0, -1)
+
+[sub_resource type="Resource" id="Placement_ground_7"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-1, 0, 1)
+
+[sub_resource type="Resource" id="Placement_ground_8"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-1, 0, 3)
+
+[sub_resource type="Resource" id="Placement_ground_9"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(1, 0, -3)
+
+[sub_resource type="Resource" id="Placement_ground_10"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(1, 0, -1)
+
+[sub_resource type="Resource" id="Placement_ground_11"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(1, 0, 1)
+
+[sub_resource type="Resource" id="Placement_ground_12"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(1, 0, 3)
+
+[sub_resource type="Resource" id="Placement_ground_13"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, -3)
+
+[sub_resource type="Resource" id="Placement_ground_14"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, -1)
+
+[sub_resource type="Resource" id="Placement_ground_15"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, 1)
+
+[sub_resource type="Resource" id="Placement_ground_16"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, 3)
 
 [sub_resource type="Resource" id="Resource_mnyy3"]
 script = ExtResource("3_scatter")
-variants = Array[Mesh]([SubResource("ArrayMesh_xjahw"), SubResource("ArrayMesh_g77p3")])
+variants = Array[Mesh]([ExtResource("11_grass_mesh"), ExtResource("12_flower_mesh")])
 shape = 1
 size = Vector2(7, 7)
 density = 3.0
@@ -130,5 +154,5 @@ seed = 1
 [resource]
 script = ExtResource("1_zone")
 ground_size = Vector2(8, 8)
-placements = Array[ExtResource("2_placement")]([SubResource("Placement_wall_n"), SubResource("Placement_wall_e"), SubResource("Placement_corner_ne"), SubResource("Placement_roof"), SubResource("Placement_planter"), SubResource("Placement_well"), SubResource("Placement_fence_1"), SubResource("Placement_fence_2")])
+placements = Array[ExtResource("2_placement")]([SubResource("Placement_wall_n"), SubResource("Placement_wall_e"), SubResource("Placement_corner_ne"), SubResource("Placement_roof"), SubResource("Placement_planter"), SubResource("Placement_well"), SubResource("Placement_fence_1"), SubResource("Placement_fence_2"), SubResource("Placement_ground_1"), SubResource("Placement_ground_2"), SubResource("Placement_ground_3"), SubResource("Placement_ground_4"), SubResource("Placement_ground_5"), SubResource("Placement_ground_6"), SubResource("Placement_ground_7"), SubResource("Placement_ground_8"), SubResource("Placement_ground_9"), SubResource("Placement_ground_10"), SubResource("Placement_ground_11"), SubResource("Placement_ground_12"), SubResource("Placement_ground_13"), SubResource("Placement_ground_14"), SubResource("Placement_ground_15"), SubResource("Placement_ground_16")])
 scatter_regions = Array[ExtResource("3_scatter")]([SubResource("Resource_mnyy3")])
