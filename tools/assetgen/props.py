@@ -241,7 +241,19 @@ def build_table(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_chair(_seed: int = 0) -> MeshBuilder:
+    """Simple wood chair: seat, backrest, four legs."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 0.45, 0), (0.42, 0.05, 0.42), "wood", 2)
+    add_box(builder, (0, 0.75, -0.19), (0.42, 0.55, 0.05), "wood", 1)
+    for x in (-0.17, 0.17):
+        for z in (-0.17, 0.17):
+            add_box(builder, (x, 0.22, z), (0.06, 0.44, 0.06), "wood", 1)
+    return builder
+
+
 PROPS = {
+    "chair": build_chair,
     "cottage_corner": build_cottage_corner,
     "cottage_roof": build_cottage_roof,
     "cottage_wall": build_cottage_wall,
