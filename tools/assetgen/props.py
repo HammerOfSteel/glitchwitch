@@ -231,6 +231,16 @@ def build_hearth(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_table(_seed: int = 0) -> MeshBuilder:
+    """Simple wood table: top plus four legs."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 0.72, 0), (1.1, 0.06, 0.7), "wood", 2, top=("wood", 3))
+    for x in (-0.48, 0.48):
+        for z in (-0.28, 0.28):
+            add_box(builder, (x, 0.35, z), (0.08, 0.7, 0.08), "wood", 1)
+    return builder
+
+
 PROPS = {
     "cottage_corner": build_cottage_corner,
     "cottage_roof": build_cottage_roof,
@@ -248,6 +258,7 @@ PROPS = {
     "pine": build_pine,
     "planter": build_planter,
     "rock": build_rock,
+    "table": build_table,
     "well": build_well,
 }
 
