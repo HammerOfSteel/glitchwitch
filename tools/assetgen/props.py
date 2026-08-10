@@ -197,6 +197,14 @@ def build_cottage_roof(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_interior_wall(_seed: int = 0) -> MeshBuilder:
+    """One 2m interior wall segment: plastered panel with a wood baseboard."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 1.2, 0), (2.0, 2.4, 0.15), "cream", 1, top=("cream", 2))
+    add_box(builder, (0, 0.08, 0), (2.0, 0.16, 0.17), "wood", 1)
+    return builder
+
+
 PROPS = {
     "cottage_corner": build_cottage_corner,
     "cottage_roof": build_cottage_roof,
@@ -206,6 +214,7 @@ PROPS = {
     "flower": build_flower,
     "grass_tuft": build_grass_tuft,
     "ground_tile": build_ground_tile,
+    "interior_wall": build_interior_wall,
     "jar": build_jar,
     "mug": build_mug,
     "pine": build_pine,
