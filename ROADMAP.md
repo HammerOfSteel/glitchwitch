@@ -97,7 +97,13 @@ procedural approach, adapted to Godot's mesh/scene conventions.
   chair, shelf, rug, bed), budget-tested against the same 150k tri / 120
   draw call ceiling as `cottage_garden`
   (see `docs/superpowers/plans/2026-08-11-cottage-interior.md`)
-- T4.4 Village + Hedgerow Lanes first dressing pass
+- T4.4 Village + Hedgerow Lanes first dressing pass ✅ done —
+  `hedgerow_lane` zone (`src/world/hedgerow_lane/`): a straight 10m×2m
+  lane flanked by hedge rows, one stone-stile crossing point, and one
+  signpost, 4 new placeholder props (hedge, stone stile, lane path,
+  signpost), budget-tested against the same 150k tri / 120 draw call
+  ceiling as `cottage_garden`/`cottage_interior`
+  (see `docs/superpowers/plans/2026-08-12-hedgerow-lane.md`)
 - T4.5 Time-of-day + weather-lite + clock service (Patch Day weekday math, drift hooks)
 
 ## Phase 5 — Narrative Spine (`phase/05-spine`)
@@ -171,7 +177,7 @@ procedural approach, adapted to Godot's mesh/scene conventions.
 | 1 — Player & Camera | `phase/01-player-camera` | ✅ complete |
 | 2 — Character Foundation | `phase/02-character-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
 | 3 — Nature & Building Foundation | `phase/03-nature-building-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
-| 4 — World & Time | `phase/04-world` | 🚧 in progress — T4.1–T4.3 done, T4.4–T4.5 next (proceeds on placeholders, see pivot spec) |
+| 4 — World & Time | `phase/04-world` | 🚧 in progress — T4.1–T4.4 done, T4.5 next (proceeds on placeholders, see pivot spec) |
 | 5–12 | — | 📋 planned |
 
 At each gate: suites fully green, playable artifact, docs updated.

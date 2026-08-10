@@ -58,3 +58,7 @@ not a commitment to keep building it procedurally in-house.
 | shelf | building | wall shelf with boards | procedural placeholder | n/a | tools/assetgen/props.py (`build_shelf`) | P0 | Phase 4 cottage interior | done |
 | rug | building | floor rug decal quad | procedural placeholder | n/a | tools/assetgen/props.py (`build_rug`) | P0 | Phase 4 cottage interior | done |
 | bed | building | alcove bed (hero prop) | procedural placeholder | n/a | tools/assetgen/props.py (`build_bed`) | P0 | Phase 4 cottage interior | done |
+| hedge | nature | moss hedge lane segment | procedural placeholder | n/a | tools/assetgen/props.py (`build_hedge`) | P0 | Phase 4 hedgerow lane | done |
+| stone-stile | building | stone stepover crossing | procedural placeholder | n/a | tools/assetgen/props.py (`build_stone_stile`) | P0 | Phase 4 hedgerow lane | done |
+| lane-path | building | clay/dirt lane path tile | procedural placeholder | n/a | tools/assetgen/props.py (`build_lane_path`) | P0 | Phase 4 hedgerow lane | done |
+| signpost | building | wood wayfinding signpost | procedural placeholder | n/a | tools/assetgen/props.py (`build_signpost`) | P0 | Phase 4 hedgerow lane | done |
