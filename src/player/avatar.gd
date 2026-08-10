@@ -22,6 +22,12 @@ const WREN_SCENE_PATH := "res://assets/generated/wren.glb"
 const PLACEHOLDER_SCENE_PATH := "res://assets/thirdparty/wren_placeholder/wren_placeholder.glb"
 const USE_PLACEHOLDER := true
 const BLEND_TIME := 0.25
+# Player's CharacterBody3D rests with its origin ~0.15m below the floor
+# (capsule bottom = capsule offset 0.7 - height/2 0.55 = 0.15), so its feet
+# touch the ground. The procedural wren.glb bakes that offset into its own
+# root; the externally-sourced Meshy/Seren placeholder doesn't, so its feet
+# render sunk into the ground without this compensating lift.
+const PLACEHOLDER_GROUND_OFFSET := 0.15
 const MOTION_CLIPS: Dictionary = {
 	&"idle": &"idle",
 	&"walk": &"walk",
@@ -55,8 +61,16 @@ func _ready() -> void:
 		push_warning("wren body unavailable — run `make assets` first")
 		return
 	_is_placeholder = scene_path == PLACEHOLDER_SCENE_PATH
-	add_child(packed.instantiate())
-	if not _is_placeholder:
+	var body := packed.instantiate() as Node3D
+	add_child(body)
+	if _is_placeholder:
+		# The Meshy/Seren export's rest pose faces +Z (its own "front"),
+		# opposite AvatarMount's -Z-forward convention that MovementMath's
+		# facing calculations assume — without this the avatar walks
+		# backward-facing relative to its direction of travel.
+		body.rotation.y = PI
+		body.position.y = PLACEHOLDER_GROUND_OFFSET
+	else:
 		PaletteApply.apply(self)
 	var players := find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
