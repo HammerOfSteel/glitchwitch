@@ -180,7 +180,9 @@ Expected: FAIL — `KeyError: unknown prop: signpost`.
 - [ ] **Step 3: Write minimal implementation**
 
 A single wood post (proportioned like `build_fence`'s posts) with two
-short angled arm-planks near the top:
+short arm-plank boxes offset in height and side near the top (plain
+axis-aligned boxes — "arm-plank" describes their shape/function, not an
+actual rotation):
 
 ```python
 def build_signpost(_seed: int = 0) -> MeshBuilder:
@@ -283,47 +285,71 @@ git commit -m "Author hedgerow_lane Zone data"
 
 ```gdscript
 extends GdUnitTestSuite
+## Hedgerow lane smoke: the zone assembles with a player and exactly the
+## 16 PropPlacements described in hedgerow_lane.tres (no scatter regions).
 
 const HEDGEROW_LANE_SCENE := "res://src/world/hedgerow_lane/hedgerow_lane.tscn"
 
 
-func test_hedgerow_lane_has_expected_prop_count() -> void:
-    var scene := load(HEDGEROW_LANE_SCENE) as PackedScene
-    assert_that(scene).is_not_null()
-    var instance := scene.instantiate()
-    add_child(instance)
-    auto_free(instance)
-    var builder := instance.get_node("%ZoneBuilder")
-    assert_that(builder.get_child_count()).is_equal(16)
+func test_hedgerow_lane_assembles_with_player_and_props() -> void:
+	var runner := scene_runner(HEDGEROW_LANE_SCENE)
+	await runner.simulate_frames(10)
+	var lane := runner.scene()
+
+	assert_object(lane.get_node_or_null("Player")).is_not_null()
+
+	var builder := lane.get_node("%ZoneBuilder") as ZoneBuilder
+	assert_object(builder).is_not_null()
+
+	var prop_count := 0
+	for child in builder.get_children():
+		if child is Node3D:
+			prop_count += 1
+	assert_int(prop_count).override_failure_message(
+		"expected all 16 PropPlacements from hedgerow_lane.tres to be instanced under %ZoneBuilder"
+	).is_equal(16)
 ```
 
-(Mirror the exact assertion style — `assert_that`/`auto_free`/`%ZoneBuilder`
-unique-name lookup — used in `tests/unit/test_cottage_interior.gd`.)
+(Exact assertion style — `scene_runner`/`assert_object`/`assert_int`/
+`%ZoneBuilder` unique-name lookup — copied from the real
+`tests/unit/test_cottage_interior.gd`, not `assert_that`/`auto_free`.)
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run Godot import fresh (`/Applications/Godot.app/Contents/MacOS/Godot
---headless --path . --import`), then run the gdUnit suite filtered to this
-test. Expected: FAIL — scene doesn't exist yet.
+Run Godot import fresh:
+`/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import`
+
+Then run the gdUnit suite filtered to this test:
+`.tooling/godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_hedgerow_lane.gd --ignoreHeadlessMode`
+
+Expected: FAIL — scene doesn't exist yet. Clean up: `rm -rf reports`.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Write `hedgerow_lane.gd` mirroring `cottage_garden.gd`'s `_stage()`
-verbatim (same `Sun`/`Fill` lookup-and-configure pattern — rotation, light
-color, energy, shadow flags — copied from `src/world/cottage_garden/cottage_garden.gd`).
+Write `hedgerow_lane.gd` with both a `_ready()` (calling `_stage()`) and a
+`_stage()` function, mirroring `cottage_garden.gd` verbatim (same
+`Sun`/`Fill` lookup-and-configure pattern — rotation, light color, energy,
+shadow flags — copied from `src/world/cottage_garden/cottage_garden.gd`).
+Note: the light rotations/colors/energy live entirely in this script, not
+in the `.tscn` — the scene's `Sun`/`Fill` nodes are created bare (default
+transform) and `_stage()` configures them at runtime, exactly as
+`cottage_garden.tscn`/`cottage_garden.gd` do it.
 
 Write `hedgerow_lane.tscn`: `WorldEnvironment` with `background_mode = 2`
 (`BG_SKY`) and `ambient_light_source = 3` (`AMBIENT_SOURCE_SKY`), matching
-`cottage_garden.tscn` exactly; `Sun` and `Fill` `DirectionalLight3D` nodes
-in the same positions/rotations as `cottage_garden.tscn`; `GroundCollider`
-sized to the lane's ~10m × 4m footprint; `ZoneBuilder` node (unique-named
-`%ZoneBuilder`) referencing `hedgerow_lane.tres`; `Player` node, same as
+`cottage_garden.tscn` exactly; bare `Sun` and `Fill` `DirectionalLight3D`
+nodes (no rotation/color baked into the scene — `_stage()` sets those at
+runtime); `GroundCollider` sized to the lane's ~10m × 4m footprint;
+`ZoneBuilder` node (unique-named `%ZoneBuilder`) referencing
+`hedgerow_lane.tres`; `Player` node, same as
 `cottage_garden.tscn`/`cottage_interior.tscn`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Re-run Godot import, then run the gdUnit suite filtered to
-`test_hedgerow_lane.gd`. Expected: PASS (16-count assertion holds).
+Re-run Godot import, then run the gdUnit suite filtered to this test:
+`.tooling/godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_hedgerow_lane.gd --ignoreHeadlessMode`
+
+Expected: PASS (16-count assertion holds). Clean up: `rm -rf reports`.
 Then live-verify via the `godot-run_project` MCP tool — clean boot, only
 known baseline shadowing warnings, no new errors.
 
@@ -351,8 +377,11 @@ load `hedgerow_lane.tscn`, sum triangle counts and draw calls across all
 
 - [ ] **Step 2: Run test to verify it passes**
 
-Run the gdUnit suite filtered to `test_lane_budget.gd`. Expected: PASS
-immediately (16 low-poly props are well under budget).
+Run the gdUnit suite filtered to this test:
+`.tooling/godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_lane_budget.gd --ignoreHeadlessMode`
+
+Expected: PASS immediately (16 low-poly props are well under budget). Clean
+up: `rm -rf reports`.
 
 - [ ] **Step 3: Commit**
 
@@ -369,8 +398,11 @@ git commit -m "Add hedgerow_lane zone budget test"
 Expected: PASS aside from the 2 known pre-existing Blender baseline
 failures.
 
-- [ ] **Step 2:** Run the full gdUnit suite (fresh `--import` first, `rm
--rf reports` after)
+- [ ] **Step 2:** Run the full gdUnit suite (fresh
+`/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import`
+first, then
+`.tooling/godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit --ignoreHeadlessMode`,
+then `rm -rf reports` after)
 Expected: PASS aside from the 3 known pre-existing baseline failures
 (`test_interact.gd` hysteresis + 2 in `test_avatar.gd`) — no new failures.
 
