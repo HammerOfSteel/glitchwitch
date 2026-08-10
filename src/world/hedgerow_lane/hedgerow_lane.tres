@@ -38,54 +38,63 @@ script = ExtResource("2_placement")
 scene = ExtResource("5_hedge")
 position = Vector3(1.25, 0, 4)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Hedge_w2"]
 script = ExtResource("2_placement")
 scene = ExtResource("5_hedge")
 position = Vector3(1.25, 0, 2)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Hedge_w3"]
 script = ExtResource("2_placement")
 scene = ExtResource("5_hedge")
 position = Vector3(1.25, 0, 0)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Hedge_w4"]
 script = ExtResource("2_placement")
 scene = ExtResource("5_hedge")
 position = Vector3(1.25, 0, -2)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Hedge_w5"]
 script = ExtResource("2_placement")
 scene = ExtResource("5_hedge")
 position = Vector3(1.25, 0, -4)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Hedge_e1"]
 script = ExtResource("2_placement")
 scene = ExtResource("5_hedge")
 position = Vector3(-1.25, 0, 4)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Hedge_e2"]
 script = ExtResource("2_placement")
 scene = ExtResource("5_hedge")
 position = Vector3(-1.25, 0, 2)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Hedge_e4"]
 script = ExtResource("2_placement")
 scene = ExtResource("5_hedge")
 position = Vector3(-1.25, 0, -2)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Hedge_e5"]
 script = ExtResource("2_placement")
 scene = ExtResource("5_hedge")
 position = Vector3(-1.25, 0, -4)
 rotation_degrees = Vector3(0, 90, 0)
+solid = true
 
 [sub_resource type="Resource" id="Placement_stile"]
 script = ExtResource("2_placement")
@@ -95,7 +104,8 @@ position = Vector3(-1.25, 0, 0)
 [sub_resource type="Resource" id="Placement_signpost"]
 script = ExtResource("2_placement")
 scene = ExtResource("7_signpost")
-position = Vector3(-1.8, 0, 4.5)
+position = Vector3(-1.9, 0, 4.5)
+rotation_degrees = Vector3(0, 90, 0)
 
 [resource]
 script = ExtResource("1_zone")
