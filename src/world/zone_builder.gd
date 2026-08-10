@@ -97,7 +97,7 @@ func _region_area(region: ScatterRegion) -> float:
 
 
 func _build_scatter() -> void:
-	var palette_material := load(PaletteApply.PALETTE_MATERIAL_PATH) as Material
+	var palette_material := load(PaletteApply.PALETTE_SCATTER_MATERIAL_PATH) as Material
 	for region in _zone.scatter_regions:
 		if region.variants.is_empty():
 			continue

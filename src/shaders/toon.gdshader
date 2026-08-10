@@ -22,4 +22,10 @@ void light() {
 	DIFFUSE_LIGHT += lit * ATTENUATION * LIGHT_COLOR / PI;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
 	DIFFUSE_LIGHT += rim * rim_strength * ALBEDO * ATTENUATION * LIGHT_COLOR / PI;
+	// Flat ambient floor: this custom light() replaces the built-in PBR
+	// diffuse term entirely, so environment/probe ambient never reaches
+	// it — without this, thin randomly-rotated foliage cards (grass,
+	// flowers) that happen to face away from every active light crush to
+	// near-black. A small per-light floor keeps every face readable.
+	DIFFUSE_LIGHT += ALBEDO * 0.12 * LIGHT_COLOR / PI;
 }

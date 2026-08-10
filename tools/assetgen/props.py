@@ -132,38 +132,65 @@ def build_well(_seed: int = 0) -> MeshBuilder:
 
 
 def build_grass_tuft(seed: int = 0) -> MeshBuilder:
-    """A few crossed blade quads — cheap enough to scatter densely."""
+    """A small clump of tapered, leaning blades — double-sided cards so the
+    clump reads as solid grass from any camera angle, not a thin cross."""
     rng = random.Random(seed)
     builder = MeshBuilder()
-    for i in range(3):
-        angle = (math.pi / 3.0) * i
-        height = rng.uniform(0.18, 0.28)
-        half_width = 0.05
+    blade_count = 5
+    shades = (1, 2, 2, 3)
+    for i in range(blade_count):
+        angle = (2.0 * math.pi / blade_count) * i + rng.uniform(-0.2, 0.2)
+        height = rng.uniform(0.16, 0.3)
+        half_width = rng.uniform(0.02, 0.035)
+        lean = rng.uniform(0.03, 0.08)  # tip drifts outward as the blade leans
         dx = math.cos(angle) * half_width
         dz = math.sin(angle) * half_width
-        builder.add_face(
-            [
-                (-dx, 0.0, -dz), (dx, 0.0, dz),
-                (dx, height, dz), (-dx, height, -dz),
-            ],
-            "moss", 2,
+        tip = (
+            math.cos(angle) * lean,
+            height,
+            math.sin(angle) * lean,
+        )
+        shade = shades[i % len(shades)]
+        # Tapered triangle (wide base, pointed tip) reads far more like a
+        # blade of grass than a rectangle.
+        builder.add_double_face(
+            [(-dx, 0.0, -dz), (dx, 0.0, dz), tip],
+            "moss", shade,
         )
     return builder
 
 
 def build_flower(seed: int = 0) -> MeshBuilder:
-    """A single small flower — stem plus a flat bloom quad."""
+    """A small daisy-like flower: a thin stem, a ring of angled petals, and
+    a bright center hub — reads as an actual flower instead of a flat
+    quad."""
     rng = random.Random(seed)
     builder = MeshBuilder()
-    add_cylinder(builder, (0, 0.09, 0), 0.01, 0.18, 5, "moss", 1, cap_top=False)
-    bloom_shade = rng.choice([0, 1, 2])
-    builder.add_face(
-        [
-            (-0.05, 0.18, 0.1), (0.05, 0.18, 0.1),
-            (0.05, 0.18, 0.0), (-0.05, 0.18, 0.0),
-        ],
-        "honey", bloom_shade,
-    )
+    stem_height = rng.uniform(0.16, 0.22)
+    add_cylinder(builder, (0, stem_height * 0.5, 0), 0.008, stem_height, 5,
+                 "moss", 1, cap_top=False)
+    petal_count = 6
+    petal_len = rng.uniform(0.045, 0.06)
+    petal_shade = rng.choice([2, 3])
+    tilt = 0.35  # petals angle upward slightly, like an open bloom
+    for i in range(petal_count):
+        angle = (2.0 * math.pi / petal_count) * i
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        inner = (cos_a * 0.012, stem_height, sin_a * 0.012)
+        outer = (
+            cos_a * petal_len,
+            stem_height + tilt * petal_len,
+            sin_a * petal_len,
+        )
+        side = (-sin_a, 0.0, cos_a)
+        half = 0.016
+        p0 = (inner[0] - side[0] * half, inner[1], inner[2] - side[2] * half)
+        p1 = (inner[0] + side[0] * half, inner[1], inner[2] + side[2] * half)
+        builder.add_double_face([p0, p1, outer], "cream", petal_shade)
+    # Center hub: a small flattened cone so the flower has a raised, bright
+    # middle instead of an empty gap between petal bases.
+    add_cylinder(builder, (0, stem_height + 0.006, 0), 0.02, 0.012, 6,
+                 "honey", 3, cap_top=True, cap_bottom=False)
     return builder
 
 

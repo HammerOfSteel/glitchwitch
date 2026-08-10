@@ -127,6 +127,7 @@ func test_rebuild_scatter_is_deterministic() -> void:
 
 func test_rebuild_dresses_placements_and_scatter_with_palette_material() -> void:
 	var palette_material: Material = load(PaletteApply.PALETTE_MATERIAL_PATH)
+	var scatter_material: Material = load(PaletteApply.PALETTE_SCATTER_MATERIAL_PATH)
 	var builder := ZoneBuilder.new()
 	auto_free(builder)
 	var zone := _make_zone_with_placements()
@@ -153,8 +154,8 @@ func test_rebuild_dresses_placements_and_scatter_with_palette_material() -> void
 	assert_int(multimesh_instances.size()).is_greater(0)
 	for found in multimesh_instances:
 		assert_object((found as MultiMeshInstance3D).material_override) \
-			.override_failure_message("a scatter MultiMeshInstance3D is missing the palette material") \
-			.is_same(palette_material)
+			.override_failure_message("a scatter MultiMeshInstance3D is missing the no-outline scatter palette material") \
+			.is_same(scatter_material)
 
 
 func test_solid_placement_gets_a_collision_shape_matching_its_mesh() -> void:

@@ -69,6 +69,15 @@ class MeshBuilder:
         for i in range(1, len(points) - 1):
             self.indices.extend((base, base + i, base + i + 1))
 
+    def add_double_face(self, points, ramp: str, shade: int) -> None:
+        """Add a face visible from both sides — a second copy with reversed
+        winding (and thus an opposite, correctly-facing normal) stacked on
+        the same geometry. Needed for single-layer cards (grass blades,
+        flower petals) that must read as solid from any camera angle,
+        without depending on renderer double-sided/backface-cull settings."""
+        self.add_face(points, ramp, shade)
+        self.add_face(list(reversed(points)), ramp, shade)
+
     def merge(self, other: "MeshBuilder", offset=(0.0, 0.0, 0.0), yaw: float = 0.0) -> None:
         base = len(self.positions)
         for position in other.positions:
