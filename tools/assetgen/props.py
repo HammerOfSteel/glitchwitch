@@ -291,6 +291,15 @@ def build_hedge(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_stone_stile(_seed: int = 0) -> MeshBuilder:
+    """A stepover crossing through a hedge row: two stone steps + a rail."""
+    builder = MeshBuilder()
+    for x in (-0.6, 0.6):
+        add_box(builder, (x, 0.2, 0), (0.5, 0.4, 0.5), "stone", 1, top=("stone", 2))
+    add_box(builder, (0, 0.55, 0), (1.3, 0.08, 0.08), "wood", 1)
+    return builder
+
+
 PROPS = {
     "bed": build_bed,
     "chair": build_chair,
@@ -313,6 +322,7 @@ PROPS = {
     "rock": build_rock,
     "rug": build_rug,
     "shelf": build_shelf,
+    "stone_stile": build_stone_stile,
     "table": build_table,
     "well": build_well,
 }
