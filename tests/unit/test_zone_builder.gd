@@ -155,3 +155,47 @@ func test_rebuild_dresses_placements_and_scatter_with_palette_material() -> void
 		assert_object((found as MultiMeshInstance3D).material_override) \
 			.override_failure_message("a scatter MultiMeshInstance3D is missing the palette material") \
 			.is_same(palette_material)
+
+
+func test_solid_placement_gets_a_collision_shape_matching_its_mesh() -> void:
+	var zone := Zone.new()
+	zone.ground_size = Vector2(4.0, 4.0)
+	var placement := PropPlacement.new()
+	placement.scene = load(CRATE_SCENE)
+	placement.position = Vector3(1.0, 0.0, 1.0)
+	placement.solid = true
+	zone.placements = [placement]
+
+	var builder := ZoneBuilder.new()
+	auto_free(builder)
+	builder.zone = zone
+	builder.rebuild()
+
+	var instance := builder.get_child(0)
+	var bodies := instance.find_children("*", "StaticBody3D", true, false)
+	assert_int(bodies.size()) \
+		.override_failure_message("solid placement produced no StaticBody3D") \
+		.is_equal(1)
+	var shape := (bodies[0] as StaticBody3D).find_children("*", "CollisionShape3D", true, false)[0] \
+		as CollisionShape3D
+	var box := shape.shape as BoxShape3D
+	assert_object(box) \
+		.override_failure_message("solid placement's collider isn't a BoxShape3D") \
+		.is_not_null()
+	assert_bool(box.size.length() > 0.0) \
+		.override_failure_message("solid placement's collider has zero size") \
+		.is_true()
+
+
+func test_non_solid_placement_gets_no_collision_shape() -> void:
+	var zone := _make_zone_with_placements()  # neither placement sets solid
+	var builder := ZoneBuilder.new()
+	auto_free(builder)
+	builder.zone = zone
+	builder.rebuild()
+
+	for instance in builder.get_children():
+		var bodies := (instance as Node).find_children("*", "StaticBody3D", true, false)
+		assert_int(bodies.size()) \
+			.override_failure_message("non-solid placement unexpectedly got a StaticBody3D") \
+			.is_equal(0)

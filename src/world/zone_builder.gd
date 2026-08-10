@@ -46,6 +46,48 @@ func _build_placements() -> void:
 			node3d.rotation_degrees = placement.rotation_degrees
 			node3d.scale = Vector3.ONE * placement.scale
 		PaletteApply.apply(instance)
+		if placement.solid:
+			_add_collision(instance)
+
+
+func _add_collision(instance: Node) -> void:
+	## Auto-derives a box collider from the placement's visual mesh AABB so
+	## solid props (hedges, walls, fences...) block the player without
+	## every prop needing hand-authored collision geometry.
+	var aabb := _visual_aabb(instance)
+	if aabb.size == Vector3.ZERO:
+		return
+	var body := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = aabb.size
+	shape.shape = box
+	shape.position = aabb.get_center()
+	body.add_child(shape)
+	instance.add_child(body)
+
+
+func _visual_aabb(instance: Node) -> AABB:
+	## Local-space AABB (relative to `instance`) covering every MeshInstance3D
+	## beneath it, honoring each mesh node's transform along the way.
+	var result := AABB()
+	var found_any := false
+	for mesh_node in instance.find_children("*", "MeshInstance3D", true, false):
+		var mi := mesh_node as MeshInstance3D
+		if mi.mesh == null:
+			continue
+		var xform := Transform3D.IDENTITY
+		var node: Node3D = mi
+		while node != instance:
+			xform = node.transform * xform
+			node = node.get_parent() as Node3D
+		var mesh_aabb: AABB = xform * mi.mesh.get_aabb()
+		if not found_any:
+			result = mesh_aabb
+			found_any = true
+		else:
+			result = result.merge(mesh_aabb)
+	return result
 
 
 func _region_area(region: ScatterRegion) -> float:
