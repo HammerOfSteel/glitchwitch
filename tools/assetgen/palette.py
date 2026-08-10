@@ -8,6 +8,7 @@ Layout: one ramp per row, shades 0..3 left to right (0 = darkest).
 """
 from __future__ import annotations
 
+import random
 import struct
 import zlib
 
@@ -39,6 +40,15 @@ RAMPS = [
 
 RAMP_INDEX = {name: row for row, (name, _) in enumerate(RAMPS)}
 
+# Baked, non-flat texture regions appended below the ramp rows — for faces
+# that need real per-pixel detail (coursed masonry, grain) instead of one
+# flat palette color. Each entry is (name, width_px, height_px). Order is
+# append-only, same rule as RAMPS: existing UVs must stay valid.
+TEXTURES = [
+    ("stone_wall", 88, 96),
+]
+TEXTURE_INDEX = {name: i for i, (name, _, _) in enumerate(TEXTURES)}
+
 
 def ramp_names():
     return [name for name, _ in RAMPS]
@@ -48,8 +58,16 @@ def hex_to_rgb(value: str):
     return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
 
 
+def _ramps_height_px():
+    return len(RAMPS) * CELL_PX
+
+
 def atlas_size_px():
-    return COLS * CELL_PX, len(RAMPS) * CELL_PX
+    width = COLS * CELL_PX
+    for _, tex_width, _ in TEXTURES:
+        width = max(width, tex_width)
+    height = _ramps_height_px() + sum(tex_height for _, _, tex_height in TEXTURES)
+    return width, height
 
 
 def cell_uv(ramp: str, shade: int):
@@ -62,6 +80,56 @@ def cell_uv(ramp: str, shade: int):
     u = ((shade + 0.5) * CELL_PX) / width
     v = ((RAMP_INDEX[ramp] + 0.5) * CELL_PX) / height
     return round(u, 6), round(v, 6)
+
+
+def texture_uv_rect(name: str):
+    """Normalized (u0, v0, u1, v1) bounding box of a baked texture region,
+    for mesh faces that map real per-vertex UV corners across it (instead
+    of the single-point flat-color UV that cell_uv gives ramp faces)."""
+    if name not in TEXTURE_INDEX:
+        raise KeyError(f"unknown texture: {name}")
+    y0 = _ramps_height_px()
+    for tex_name, tex_width, tex_height in TEXTURES:
+        if tex_name == name:
+            width, height = atlas_size_px()
+            return (
+                0.0, round(y0 / height, 6),
+                round(tex_width / width, 6), round((y0 + tex_height) / height, 6),
+            )
+        y0 += tex_height
+    raise KeyError(name)  # pragma: no cover — guarded by TEXTURE_INDEX check above
+
+
+def _stone_wall_pixels():
+    """Procedurally generate a coursed-stone masonry texture sized to cover
+    a whole cottage wall face as one baked image (~11x12 stones at 8px
+    each): rows of stones in a running-bond offset, each stone a jittered
+    (dithered, not flat) shade of the "stone" ramp, separated by darker
+    mortar lines. Deterministic (fixed seed) — baked once into the palette
+    atlas so a wall can be a single untiled quad (no internal mesh seams
+    for the toon outline pass to catch) while still reading as real stone
+    grain rather than one flat color."""
+    width, height = TEXTURES[TEXTURE_INDEX["stone_wall"]][1:]
+    stone_w, stone_h = 8, 8
+    cols, rows = width // stone_w, height // stone_h
+    shades = [hex_to_rgb(value) for value in RAMPS[RAMP_INDEX["stone"]][1]]
+    mortar = tuple(max(0, c - 30) for c in shades[0])
+    rng = random.Random(20260810)
+    pixels = [[shades[1] for _ in range(width)] for _ in range(height)]
+    for row in range(rows):
+        shift = (stone_w // 2) if row % 2 else 0
+        for col in range(cols):
+            base = rng.choice([shades[1], shades[1], shades[2], shades[2], shades[0], shades[3]])
+            for dy in range(stone_h):
+                for dx in range(stone_w):
+                    x = (col * stone_w + dx + shift) % width
+                    y = row * stone_h + dy
+                    if dx == 0 or dy == 0:
+                        pixels[y][x] = mortar
+                    else:
+                        jitter = rng.randint(-8, 8)
+                        pixels[y][x] = tuple(max(0, min(255, c + jitter)) for c in base)
+    return pixels
 
 
 def _png_chunk(tag: bytes, data: bytes) -> bytes:
@@ -89,6 +157,20 @@ def build_palette_png() -> bytes:
                 pixel_row += bytes((0, 0, 0, 0))  # reserved cells: transparent
         for _ in range(CELL_PX):
             rows.append(bytes(pixel_row))
+
+    # Baked, non-flat texture regions (e.g. stone_wall masonry grain).
+    texture_generators = {"stone_wall": _stone_wall_pixels}
+    for tex_name, _, _ in TEXTURES:
+        for pixel_row in texture_generators[tex_name]():
+            row_bytes = bytearray()
+            for x in range(width):
+                if x < len(pixel_row):
+                    red, green, blue = pixel_row[x]
+                    row_bytes += bytes((red, green, blue, 255))
+                else:
+                    row_bytes += bytes((0, 0, 0, 0))
+            rows.append(bytes(row_bytes))
+
     raw = b"".join(b"\x00" + row for row in rows)
     header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     return (

@@ -9,6 +9,7 @@ import math
 import random
 
 from .mesh import MeshBuilder, add_box, add_cone, add_cylinder, add_lathe
+from . import palette
 
 
 def build_ground_tile(_seed: int = 0) -> MeshBuilder:
@@ -224,6 +225,133 @@ def build_cottage_roof(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def _add_pitched_roof(builder: MeshBuilder, width: float, depth: float, eave_y: float,
+                       rise: float, overhang: float, ramp: str, shade: int) -> None:
+    """A simple two-slope gable roof: ridge runs along X, sloping down to
+    eaves on +Z/-Z, with a triangular gable fill at each end so the
+    underside of the overhang doesn't read as open sky."""
+    hw = width / 2.0 + overhang
+    hd = depth / 2.0 + overhang
+    ridge_y = eave_y + rise
+    l_front = (-hw, eave_y, hd)
+    l_back = (-hw, eave_y, -hd)
+    l_ridge = (-hw, ridge_y, 0.0)
+    r_front = (hw, eave_y, hd)
+    r_back = (hw, eave_y, -hd)
+    r_ridge = (hw, ridge_y, 0.0)
+    builder.add_face([l_front, r_front, r_ridge, l_ridge], ramp, shade)  # front slope
+    builder.add_face([r_back, l_back, l_ridge, r_ridge], ramp, shade)    # back slope
+    builder.add_face([l_front, l_ridge, l_back], ramp, max(shade - 1, 0))  # left gable underside
+    builder.add_face([r_back, r_ridge, r_front], ramp, max(shade - 1, 0))  # right gable underside
+
+
+def _add_stone_wall_box(builder: MeshBuilder, center, size, ramp: str, rng: random.Random) -> None:
+    """Axis-aligned box whose four vertical side faces are each a single
+    quad mapped across the whole baked stone-masonry texture (see
+    palette.texture_uv_rect("stone_wall")) — real stone grain, and (crucially)
+    no internal mesh seams for the toon outline pass to catch, unlike an
+    earlier subdivided-block version. Top/bottom stay flat single-shade
+    (hidden under the roof / against the ground)."""
+    cx, cy, cz = center
+    hx, hy, hz = size[0] / 2.0, size[1] / 2.0, size[2] / 2.0
+    u0, v0, u1, v1 = palette.texture_uv_rect("stone_wall")
+    top_shade = 3
+    bottom_shade = 0
+
+    top = [(cx - hx, cy + hy, cz - hz), (cx - hx, cy + hy, cz + hz),
+           (cx + hx, cy + hy, cz + hz), (cx + hx, cy + hy, cz - hz)]
+    builder.add_face(top, ramp, top_shade)
+    bottom = [(cx - hx, cy - hy, cz - hz), (cx + hx, cy - hy, cz - hz),
+              (cx + hx, cy - hy, cz + hz), (cx - hx, cy - hy, cz + hz)]
+    builder.add_face(bottom, ramp, bottom_shade)
+
+    def face(points):
+        # Occasionally mirror horizontally so all four walls don't show the
+        # exact same texture orientation.
+        left_u, right_u = (u1, u0) if rng.random() < 0.5 else (u0, u1)
+        uvs = [(left_u, v1), (right_u, v1), (right_u, v0), (left_u, v0)]
+        builder.add_textured_face(points, uvs)
+
+    face([(cx - hx, cy - hy, cz + hz), (cx + hx, cy - hy, cz + hz),
+          (cx + hx, cy + hy, cz + hz), (cx - hx, cy + hy, cz + hz)])  # +Z
+    face([(cx + hx, cy - hy, cz - hz), (cx - hx, cy - hy, cz - hz),
+          (cx - hx, cy + hy, cz - hz), (cx + hx, cy + hy, cz - hz)])  # -Z
+    face([(cx + hx, cy - hy, cz + hz), (cx + hx, cy - hy, cz - hz),
+          (cx + hx, cy + hy, cz - hz), (cx + hx, cy + hy, cz + hz)])  # +X
+    face([(cx - hx, cy - hy, cz - hz), (cx - hx, cy - hy, cz + hz),
+          (cx - hx, cy + hy, cz + hz), (cx - hx, cy + hy, cz - hz)])  # -X
+
+
+def build_cottage_facade(_seed: int = 0) -> MeshBuilder:
+    """A two-story stone cottage exterior: stone walls, two rows of
+    sash-style windows, a dark cottage door, a pitched slate roof, and a
+    chimney with a pot — one hero placement instead of an assembled
+    wall/corner/roof kit.
+
+    Scaled and styled after a reference Welsh terraced-house model (stone
+    walls, slate roof, two chimney pots, front garden) the user pointed to
+    — this isn't a literal copy, just matched for size/material feel: a
+    real two-story house rather than a single small shed. Exterior-only
+    (no interior geometry — cottage_interior.tscn is the separate walkable
+    scene), so it can be a solid shell.
+    """
+    builder = MeshBuilder()
+    rng = random.Random(_seed)
+    width, depth = 4.4, 3.4
+    eave_y = 3.6  # two floors' worth of wall height
+
+    # Stone wall shell — coursed fieldstone blocks, not a flat panel.
+    _add_stone_wall_box(builder, (0, eave_y / 2.0, 0), (width, eave_y, depth), "stone", rng)
+
+    # Quoins: lighter stone corner posts for definition.
+    hx, hz = width / 2.0 - 0.1, depth / 2.0 - 0.1
+    for x in (-hx, hx):
+        for z in (-hz, hz):
+            add_box(builder, (x, eave_y / 2.0, z), (0.2, eave_y, 0.2), "stone", 2)
+
+    # Foundation course and first-floor stringcourse for two-story readability.
+    add_box(builder, (0, 0.08, 0), (width, 0.16, depth), "stone", 0)
+    floor_y = eave_y / 2.0
+    add_box(builder, (0, floor_y, 0), (width + 0.04, 0.14, depth + 0.04), "stone", 2)
+
+    # Door, centered on the front (-Z) face, dark cottage-green.
+    door_w, door_h = 0.95, 1.9
+    door_z = -depth / 2.0 - 0.03
+    add_box(builder, (0, door_h / 2.0, door_z), (door_w + 0.2, door_h + 0.2, 0.06), "clay", 1)
+    add_box(builder, (0, door_h / 2.0, door_z - 0.02), (door_w, door_h, 0.05), "pine", 0,
+            top=("pine", 1))
+
+    # Ground-floor windows flanking the door, first-floor windows above.
+    win_size = 0.62
+    ground_y = door_h * 0.55
+    first_y = eave_y - 0.95
+    for wx in (-1.35, 1.35):
+        for wy in (ground_y, first_y):
+            add_box(builder, (wx, wy, door_z), (win_size + 0.14, win_size + 0.14, 0.05),
+                    "cream", 3)
+            add_box(builder, (wx, wy, door_z - 0.02), (win_size, win_size, 0.04), "metal", 0)
+
+    # Side window (+X wall), for detail from other viewing angles.
+    win_x = width / 2.0 + 0.03
+    add_box(builder, (win_x, first_y, 0), (0.06, win_size + 0.14, win_size + 0.14), "cream", 3)
+    add_box(builder, (win_x + 0.01, first_y, 0), (0.05, win_size, win_size), "metal", 0)
+
+    # Pitched slate roof with overhang.
+    overhang = 0.4
+    rise = 1.3
+    _add_pitched_roof(builder, width, depth, eave_y, rise, overhang, "metal", 1)
+    ridge_y = eave_y + rise
+
+    # Chimney with a pot, offset toward one gable end.
+    chimney_x = hx - 0.4
+    add_box(builder, (chimney_x, ridge_y + 0.35, 0), (0.4, 0.7, 0.4), "stone", 1,
+            top=("stone", 2))
+    add_cylinder(builder, (chimney_x, ridge_y + 0.78, 0), 0.1, 0.24, 8, "rust", 2,
+                 cap_top=True, cap_bottom=False)
+
+    return builder
+
+
 def build_interior_wall(_seed: int = 0) -> MeshBuilder:
     """One 2m interior wall segment: plastered panel with a wood baseboard."""
     builder = MeshBuilder()
@@ -348,6 +476,7 @@ PROPS = {
     "bed": build_bed,
     "chair": build_chair,
     "cottage_corner": build_cottage_corner,
+    "cottage_facade": build_cottage_facade,
     "cottage_roof": build_cottage_roof,
     "cottage_wall": build_cottage_wall,
     "crate": build_crate,
@@ -379,7 +508,9 @@ HERO_TRI_BUDGET = 1500
 
 # Props allowed to spend the hero budget instead of the regular one — kept
 # to a short, explicit list so budget creep needs a deliberate edit here.
-HERO_PROPS: set[str] = {"cottage_wall", "cottage_corner", "cottage_roof", "hearth", "bed"}
+HERO_PROPS: set[str] = {
+    "cottage_wall", "cottage_corner", "cottage_roof", "cottage_facade", "hearth", "bed",
+}
 
 
 def build_prop(name: str, seed: int = 0) -> MeshBuilder:
