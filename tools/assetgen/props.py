@@ -300,6 +300,14 @@ def build_stone_stile(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_lane_path(_seed: int = 0) -> MeshBuilder:
+    """2x2 m lane path tile: dirt/clay ground distinct from grass."""
+    builder = MeshBuilder()
+    add_box(builder, (0, -0.1, 0), (2.0, 0.2, 2.0), "clay", 1,
+            top=("clay", 2), bottom=("bark", 0))
+    return builder
+
+
 PROPS = {
     "bed": build_bed,
     "chair": build_chair,
@@ -316,6 +324,7 @@ PROPS = {
     "interior_floor": build_interior_floor,
     "interior_wall": build_interior_wall,
     "jar": build_jar,
+    "lane_path": build_lane_path,
     "mug": build_mug,
     "pine": build_pine,
     "planter": build_planter,
