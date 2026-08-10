@@ -83,7 +83,8 @@ def test_cone_winds_outward():
 
 @pytest.mark.parametrize(
     "name", ["crate", "ground_tile", "pine", "jar", "planter", "rock", "well",
-              "interior_wall", "interior_floor", "hearth", "table", "chair"]
+              "interior_wall", "interior_floor", "hearth", "table", "chair",
+              "shelf"]
 )
 def test_closed_props_have_positive_volume(name):
     volume = _signed_volume(props.build_prop(name, seed=0))

@@ -252,6 +252,16 @@ def build_chair(_seed: int = 0) -> MeshBuilder:
     return builder
 
 
+def build_shelf(_seed: int = 0) -> MeshBuilder:
+    """Wall shelf: back panel plus two shelf boards, sized to host jar/mug
+    props as set-dressing."""
+    builder = MeshBuilder()
+    add_box(builder, (0, 0.9, -0.06), (1.0, 1.2, 0.03), "wood", 1)
+    for y in (0.5, 1.3):
+        add_box(builder, (0, y, 0.1), (1.0, 0.04, 0.26), "wood", 2, top=("wood", 3))
+    return builder
+
+
 PROPS = {
     "chair": build_chair,
     "cottage_corner": build_cottage_corner,
@@ -270,6 +280,7 @@ PROPS = {
     "pine": build_pine,
     "planter": build_planter,
     "rock": build_rock,
+    "shelf": build_shelf,
     "table": build_table,
     "well": build_well,
 }
