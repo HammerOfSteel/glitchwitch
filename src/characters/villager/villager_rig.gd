@@ -39,6 +39,8 @@ static func build(dna: VillagerDna) -> VillagerRig:
 	var torso_mesh := CapsuleMesh.new()
 	torso_mesh.radius = TORSO_RADIUS * b
 	torso_mesh.height = torso_height
+	torso_mesh.radial_segments = 10
+	torso_mesh.rings = 4
 	torso.mesh = PaletteUv.stamp_mesh(torso_mesh, dna.clothing_ramp, CLOTHING_SHADE)
 	torso.position = Vector3(0.0, leg_length + torso_height / 2.0, 0.0)
 	rig.root.add_child(torso)
@@ -53,6 +55,8 @@ static func build(dna: VillagerDna) -> VillagerRig:
 	var head_mesh := SphereMesh.new()
 	head_mesh.radius = HEAD_RADIUS * b
 	head_mesh.height = HEAD_RADIUS * b * 2.0
+	head_mesh.radial_segments = 10
+	head_mesh.rings = 5
 	head.mesh = PaletteUv.stamp_mesh(head_mesh, dna.skin_ramp, SKIN_SHADE)
 	head.position = Vector3(0.0, HEAD_RADIUS * b, 0.0)
 	neck.add_child(head)
@@ -68,6 +72,8 @@ static func build(dna: VillagerDna) -> VillagerRig:
 	var hair_mesh := SphereMesh.new()
 	hair_mesh.radius = HAIR_RADIUS * b
 	hair_mesh.height = HAIR_RADIUS * b * 1.2
+	hair_mesh.radial_segments = 8
+	hair_mesh.rings = 4
 	hair.mesh = PaletteUv.stamp_mesh(hair_mesh, dna.hair_ramp, HAIR_SHADE)
 	hair.scale = Vector3(1.0, 0.65, 1.0)
 	head_top.add_child(hair)
@@ -85,6 +91,8 @@ static func build(dna: VillagerDna) -> VillagerRig:
 		var arm_mesh := CapsuleMesh.new()
 		arm_mesh.radius = ARM_RADIUS * b
 		arm_mesh.height = ARM_LENGTH * h
+		arm_mesh.radial_segments = 8
+		arm_mesh.rings = 3
 		elbow.mesh = PaletteUv.stamp_mesh(arm_mesh, dna.clothing_ramp, CLOTHING_SHADE)
 		elbow.position = Vector3(0.0, -ARM_LENGTH * h / 2.0, 0.0)
 		shoulder.add_child(elbow)
@@ -94,6 +102,8 @@ static func build(dna: VillagerDna) -> VillagerRig:
 		var hand_mesh := SphereMesh.new()
 		hand_mesh.radius = HAND_RADIUS * b
 		hand_mesh.height = HAND_RADIUS * b * 2.0
+		hand_mesh.radial_segments = 8
+		hand_mesh.rings = 4
 		hand.mesh = PaletteUv.stamp_mesh(hand_mesh, dna.skin_ramp, SKIN_SHADE)
 		hand.position = Vector3(0.0, -ARM_LENGTH * h / 2.0, 0.0)
 		elbow.add_child(hand)
@@ -110,6 +120,8 @@ static func build(dna: VillagerDna) -> VillagerRig:
 		var leg_mesh := CapsuleMesh.new()
 		leg_mesh.radius = LEG_RADIUS * b
 		leg_mesh.height = leg_length
+		leg_mesh.radial_segments = 10
+		leg_mesh.rings = 3
 		knee.mesh = PaletteUv.stamp_mesh(leg_mesh, dna.clothing_ramp, CLOTHING_SHADE)
 		knee.position = Vector3(0.0, -leg_length / 2.0, 0.0)
 		hip.add_child(knee)
