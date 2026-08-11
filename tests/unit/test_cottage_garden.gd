@@ -28,3 +28,14 @@ func test_cottage_garden_assembles_with_player_and_props() -> void:
 	assert_bool(has_scatter).override_failure_message(
 		"expected at least one scatter region in cottage_garden.tres"
 	).is_true()
+
+
+func test_cottage_garden_has_demo_villager() -> void:
+	var runner := scene_runner(COTTAGE_GARDEN_SCENE)
+	await runner.simulate_frames(10)
+	var garden := runner.scene()
+	var villager := garden.get_node_or_null("DemoVillager")
+	assert_object(villager).override_failure_message(
+		"expected a DemoVillager node in cottage_garden.tscn"
+	).is_not_null()
+	assert_bool(villager is VillagerInstance).is_true()
