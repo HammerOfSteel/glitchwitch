@@ -8,6 +8,7 @@ Layout: one ramp per row, shades 0..3 left to right (0 = darkest).
 """
 from __future__ import annotations
 
+import json
 import random
 import struct
 import zlib
@@ -179,3 +180,15 @@ def build_palette_png() -> bytes:
         + _png_chunk(b"IDAT", zlib.compress(raw, 9))
         + _png_chunk(b"IEND", b"")
     )
+
+
+def build_palette_uv_json() -> bytes:
+    """Flat {"ramp/shade": [u, v]} map of every cell_uv(), for runtime
+    (GDScript) consumers that can't import this Python module directly —
+    see docs/superpowers/specs/2026-08-10-villager-rig-system-design.md."""
+    entries = {}
+    for name in ramp_names():
+        for shade in range(SHADES):
+            u, v = cell_uv(name, shade)
+            entries[f"{name}/{shade}"] = [u, v]
+    return json.dumps(entries, indent=2, sort_keys=True).encode("utf-8") + b"\n"

@@ -64,6 +64,12 @@ def build_all() -> dict:
         "sha256": hashlib.sha256(png).hexdigest(),
         "ramps": palette.ramp_names(),
     }
+    palette_uv_json = palette.build_palette_uv_json()
+    (OUT_DIR / "palette_uv.json").write_bytes(palette_uv_json)
+    manifest["palette"]["palette_uv.json"] = {
+        "bytes": len(palette_uv_json),
+        "sha256": hashlib.sha256(palette_uv_json).hexdigest(),
+    }
 
     for name in sorted(props.PROPS):
         builder = props.build_prop(name, seed=0)
