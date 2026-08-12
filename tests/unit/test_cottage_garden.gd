@@ -63,4 +63,6 @@ func test_cottage_garden_has_time_of_day_rig_driving_sun_and_fill() -> void:
 	assert_bool(fill.light_color.is_equal_approx(expected.fill_color)).is_true()
 	assert_float(fill.light_energy).is_equal_approx(expected.fill_energy, 0.001)
 
+
+func after_test() -> void:
 	GameClock.debug_override_hour = null
