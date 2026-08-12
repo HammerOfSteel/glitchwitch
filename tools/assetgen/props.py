@@ -303,14 +303,19 @@ def build_cottage_facade(_seed: int = 0) -> MeshBuilder:
     # Stone wall shell — coursed fieldstone blocks, not a flat panel.
     _add_stone_wall_box(builder, (0, eave_y / 2.0, 0), (width, eave_y, depth), "stone", rng)
 
-    # Quoins: lighter stone corner posts for definition.
+    # Quoins: lighter stone corner posts for definition. Sized a hair proud
+    # of the wall shell (not flush) so their outer faces don't sit exactly
+    # coplanar with the wall's own outer faces — coplanar geometry causes
+    # z-fighting flicker at the cottage's vertical edges.
     hx, hz = width / 2.0 - 0.1, depth / 2.0 - 0.1
     for x in (-hx, hx):
         for z in (-hz, hz):
-            add_box(builder, (x, eave_y / 2.0, z), (0.2, eave_y, 0.2), "stone", 2)
+            add_box(builder, (x, eave_y / 2.0, z), (0.28, eave_y, 0.28), "stone", 2)
 
     # Foundation course and first-floor stringcourse for two-story readability.
-    add_box(builder, (0, 0.08, 0), (width, 0.16, depth), "stone", 0)
+    # (Proud of the wall shell by the same +0.04 margin as the stringcourse
+    # below, not flush — flush would z-fight along the entire base perimeter.)
+    add_box(builder, (0, 0.08, 0), (width + 0.04, 0.16, depth + 0.04), "stone", 0)
     floor_y = eave_y / 2.0
     add_box(builder, (0, floor_y, 0), (width + 0.04, 0.14, depth + 0.04), "stone", 2)
 

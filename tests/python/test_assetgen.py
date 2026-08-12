@@ -173,3 +173,47 @@ def test_cottage_kit_pieces_are_hero_props(name):
     assert name in props.HERO_PROPS
     builder = props.build_prop(name, seed=0)
     assert 0 < builder.tri_count <= props.HERO_TRI_BUDGET
+
+
+def test_cottage_facade_quoins_are_proud_of_wall_face():
+    # Regression: the quoin (corner post) boxes used to be sized so their
+    # outer faces sat exactly flush (coplanar) with the stone wall shell's
+    # own outer faces — at x = +/-width/2 and z = +/-depth/2. Perfectly
+    # coplanar geometry z-fights (flickers) at render time, which is exactly
+    # the "glitchy edges" reported at the cottage's corners. Quoins must
+    # extend measurably past the wall face instead of sitting flush with it.
+    #
+    # Isolated to the y=0 (ground-corner) vertices in the quoin's own x/z
+    # region (|x| > 1.9, near the corner) so unrelated geometry that also
+    # touches y=0 near the wall face (door frame, foundation course) can't
+    # mask a regression back to flush quoins.
+    builder = props.build_prop("cottage_facade", seed=0)
+    width, depth = 4.4, 3.4
+    corner_base = [
+        p for p in builder.positions if abs(p[1]) < 1e-6 and abs(p[0]) > 1.9
+    ]
+    assert corner_base, "expected quoin/wall geometry at the base corners"
+    max_x = max(abs(p[0]) for p in corner_base)
+    max_z = max(abs(p[2]) for p in corner_base)
+    assert max_x > width / 2.0 + 0.03, "quoins are flush with (not proud of) the wall's X face"
+    assert max_z > depth / 2.0 + 0.03, "quoins are flush with (not proud of) the wall's Z face"
+
+
+def test_cottage_facade_foundation_course_is_proud_of_wall_face():
+    # Regression: the foundation course box used to be sized exactly
+    # width x depth — flush with the stone wall shell's own outer faces
+    # all the way around the base perimeter. That coplanar geometry
+    # z-fights (flickers) along the whole base of the cottage, which is
+    # the most visible instance of the "glitchy edges" reported. The
+    # foundation must be proud of the wall face (like the first-floor
+    # stringcourse already is), not flush with it.
+    builder = props.build_prop("cottage_facade", seed=0)
+    width, depth = 4.4, 3.4
+    foundation_band = [p for p in builder.positions if 1e-6 < p[1] <= 0.2]
+    offenders = [
+        p for p in foundation_band
+        if abs(abs(p[0]) - width / 2.0) < 1e-6 or abs(abs(p[2]) - depth / 2.0) < 1e-6
+    ]
+    assert not offenders, (
+        f"foundation course is flush with the wall's outer face: {offenders}"
+    )
