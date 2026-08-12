@@ -67,9 +67,8 @@ func test_choice_button_press_calls_dialogue_runner_choose() -> void:
 func test_number_key_selects_choice_positionally() -> void:
 	var box: DialogueBox = DialogueBoxScene.instantiate()
 	auto_free(box)
-	add_child(box)
-	DialogueRunner.start(_fixture_graph())
 	var runner := scene_runner(box)
+	DialogueRunner.start(_fixture_graph())
 	await runner.simulate_frames(1)
 	runner.simulate_key_pressed(KEY_1)
 	assert_bool(DialogueRunner.is_active()).is_false()
@@ -78,14 +77,13 @@ func test_number_key_selects_choice_positionally() -> void:
 func test_line_shown_reveals_text_progressively_over_time() -> void:
 	var box: DialogueBox = DialogueBoxScene.instantiate()
 	auto_free(box)
-	add_child(box)
+	var runner := scene_runner(box)
 	var single_line_json := """
 	{ "start": "only", "nodes": { "only": { "speaker": "Villager", "text": "Hi there.", "next": null } } }
 	"""
 	DialogueRunner.start(DialogueGraph._parse(JSON.parse_string(single_line_json)))
 	var text_label := box.get_node("%TextLabel") as Label
 	assert_str(text_label.text).is_equal("")
-	var runner := scene_runner(box)
 	await runner.simulate_frames(3, 50)  # a couple reveal ticks in, not yet complete
 	var partial := text_label.text
 	assert_bool(partial.length() > 0 and partial.length() < "Hi there.".length()).is_true()
