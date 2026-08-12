@@ -32,7 +32,7 @@ quests, Phase 5/10) have a real clock to hook into.
 
 ## Architecture
 
-Two new pieces:
+Three new pieces:
 
 1. **`GameClock`** — an autoload singleton holding time data, sourced from
    Godot's `Time` singleton (which already reports local system time).
@@ -75,7 +75,11 @@ extends Node
 enum Weekday { MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY }
 
 ## Placeholder for future timezone/location refinement. Inert in v1 — the
-## game currently just uses whatever local time zone the OS reports.
+## game currently just uses whatever local time zone the OS reports. Kept
+## deliberately as an explicit project-owner decision (deferred lat/long
+## solar-calc feature, not accidental scope creep) so the future field slot
+## and its intent are documented up front rather than added as a breaking
+## change later.
 var utc_offset_hours: float = 0.0
 
 ## Test hook: when non-null, hour_of_day() returns this instead of reading
@@ -296,11 +300,24 @@ this spec deliberately does not touch.
      6:00 dawn and 12:00 day keyframes) returns values that are the
      arithmetic mean of the two keyframes (proves linear interpolation
      actually runs, not just keyframe pass-through).
-   - A midnight-wraparound test (e.g. `light_state_for_hour(22.0)`,
-     between the 19:00 dusk keyframe and the 24:00-wrapped 0:00 night
-     keyframe) returns a plausible interpolated value, not a crash/garbage
-     value — proves the wraparound math (`next_kf_hour += 24.0`) is
-     correct.
+   - A midnight-wraparound test at `light_state_for_hour(22.0)` (dusk keyframe
+     at 19:00, wrapping to the night keyframe at 24:00/0:00, `t = (22.0 -
+     19.0) / (24.0 - 19.0) = 0.6`) asserts the exact lerped values, computed
+     by hand from the keyframe table above:
+     - `sun_rotation_degrees` ≈ `Vector3(-50.0, -32.0, 0.0)`
+     - `sun_color` ≈ `Color(0.73, 0.632, 0.69)`
+     - `sun_energy` ≈ `0.29`
+     - `sun_shadow_enabled == false` (t = 0.6 ≥ 0.5, so it takes the night
+       keyframe's `false`, not the dusk keyframe's `true` — this test should
+       also independently assert the `t < 0.5` case, e.g.
+       `light_state_for_hour(20.4)` where `t = 0.28 < 0.5` still reads dusk's
+       `true`)
+     - `fill_rotation_degrees` ≈ `Vector3(-20.0, 141.0, 0.0)` (identical in
+       both keyframes, so unaffected by `t`)
+     - `fill_color` ≈ `Color(0.46, 0.508, 0.72)`
+     - `fill_energy` ≈ `0.14`
+     Use an approximate-equality assertion (small epsilon, e.g. `0.001`) for
+     the float/Vector3/Color fields, since these are hand-computed decimals.
    - `sun_shadow_enabled` takes the nearer keyframe's boolean (not
      interpolated) — test both sides of the `t < 0.5` boundary.
 
@@ -310,11 +327,16 @@ this spec deliberately does not touch.
      fall through to reading real system time).
    - `weekday()` returns a value in the `GameClockService.Weekday` enum's
      valid range (can't assert an exact day since it depends on real wall
-     time, but confirm the type/range is sane, and confirm the
-     Sunday-remap arithmetic is correct by computing it independently in
-     the test and comparing — e.g. assert `weekday()` matches
-     `(Time.get_datetime_dict_from_system().weekday + 6) % 7` computed
-     directly in the test body).
+     time, but confirm the type/range is sane).
+   - The Sunday-remap arithmetic itself is verified independently of
+     `weekday()`'s real-time dependency: call the remap expression directly
+     with fixed, known Godot-weekday inputs (not the live system clock) and
+     assert against hand-computed expected `Weekday` enum values, e.g.
+     `(0 + 6) % 7 == 6` (Godot Sunday=0 → our `SUNDAY`=6), `(1 + 6) % 7 == 0`
+     (Godot Monday=1 → our `MONDAY`=0), `(6 + 6) % 7 == 5` (Godot
+     Saturday=6 → our `SATURDAY`=5). This proves the remap formula is
+     semantically correct, not merely self-consistent with its own
+     production code.
    - `date_string()` matches Godot's own `Time.get_datetime_dict_from_system()`
      fields formatted the same way (again, computed independently in the
      test body since the exact date is real-time-dependent).
@@ -333,9 +355,9 @@ this spec deliberately does not touch.
    each such test so it doesn't leak into unrelated tests run later in the
    same suite.
 
-4. **Zone budget tests** (`test_zone_budget.gd`) — re-run, unaffected in
-   principle since `TimeOfDayRig`/`Timer` add no `MeshInstance3D`s, but
-   confirm no regression as a matter of course.
+4. **Zone budget tests** (`test_zone_budget.gd`, `test_lane_budget.gd`) —
+   re-run, unaffected in principle since `TimeOfDayRig`/`Timer` add no
+   `MeshInstance3D`s, but confirm no regression as a matter of course.
 
 ## Non-goals / explicitly deferred (for later specs, not this one)
 
