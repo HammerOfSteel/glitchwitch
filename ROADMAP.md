@@ -115,7 +115,17 @@ procedural approach, adapted to Godot's mesh/scene conventions.
   spec's explicit scope split
 
 ## Phase 5 — Narrative Spine (`phase/05-spine`)
-- T5.1 Dialogue engine (JSON graphs, conditions, portraits, animalese voices)
+- T5.1 Dialogue engine ✅ done — `DialogueGraph` (JSON graph loader/
+  validator with condition-gated nodes and choices), `DialogueRunner`
+  autoload (state machine driving `line_shown`/`choices_shown`/`ended`
+  signals; asymmetric condition resolution — a false condition skips its
+  node's own line entirely via immediate `else` recursion, a true
+  condition shows its own line first and only advances via explicit
+  `advance()`), `Animalese` procedural voice-blip synth (per-NPC seeded
+  pitch), `DialogueBox` UI (portrait, typewriter reveal, numbered choice
+  buttons) wired reactively into `Player`/`InteractPrompt`, and a demo
+  villager in `cottage_garden` proving the full loop end-to-end
+  (see `docs/superpowers/plans/2026-08-12-dialogue-engine.md`)
 - T5.2 Quest engine (schema, QuestDirector, reachability lint)
 - T5.3 Magpie Log journal UI
 - T5.4 Versioned saves + migration framework ("meandering migrations")
