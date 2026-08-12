@@ -11,6 +11,7 @@
 **Full design spec (read before starting):** `docs/superpowers/specs/2026-08-12-dialogue-engine-design.md`
 
 **Godot binary for all commands below:** `/Applications/Godot.app/Contents/MacOS/Godot --headless --path .`
+This repo's documented convention is `.tooling/godot` (see `README.md`/`Makefile`) — use that binary if it's a working native executable for your platform. In this environment specifically, `.tooling/godot` is a Linux ELF binary that cannot execute on this macOS sandbox, so the full macOS app path above is used instead. Substitute whichever binary actually runs on your machine; the `-s addons/gdUnit4/bin/GdUnitCmdTool.gd -a <path> --ignoreHeadlessMode` arguments are the same either way (mirrors the repo's own `make test-godot` target).
 
 ---
 
@@ -113,9 +114,23 @@ func test_rejects_node_missing_speaker() -> void:
 	assert_object(graph).is_null()
 
 
+func test_rejects_node_with_empty_speaker() -> void:
+	var data: Dictionary = JSON.parse_string(VALID_JSON)
+	data["nodes"]["chat"]["speaker"] = ""
+	var graph := DialogueGraph._parse(data)
+	assert_object(graph).is_null()
+
+
 func test_rejects_node_missing_text() -> void:
 	var data: Dictionary = JSON.parse_string(VALID_JSON)
 	data["nodes"]["chat"].erase("text")
+	var graph := DialogueGraph._parse(data)
+	assert_object(graph).is_null()
+
+
+func test_rejects_node_with_empty_text() -> void:
+	var data: Dictionary = JSON.parse_string(VALID_JSON)
+	data["nodes"]["chat"]["text"] = ""
 	var graph := DialogueGraph._parse(data)
 	assert_object(graph).is_null()
 
@@ -127,7 +142,7 @@ func test_load_from_file_returns_null_for_missing_file() -> void:
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_dialogue_graph.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_dialogue_graph.gd`
 Expected: FAIL — `DialogueGraph` class not found / `Nonexistent function '_parse'`.
 
 - [ ] **Step 3: Write `DialogueGraph`**
@@ -224,8 +239,8 @@ static func _valid_next_ref(ref: Variant, all_nodes: Dictionary) -> bool:
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_dialogue_graph.gd`
-Expected: PASS (9/9)
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_dialogue_graph.gd`
+Expected: PASS (11/11)
 
 - [ ] **Step 5: Commit**
 
@@ -289,6 +304,7 @@ func after_test() -> void:
 	DialogueRunner.flags = {}
 	DialogueRunner._graph = null
 	DialogueRunner._current_node_id = ""
+	DialogueRunner._voice_seed = 0
 
 
 func _fixture_graph() -> DialogueGraph:
@@ -296,12 +312,22 @@ func _fixture_graph() -> DialogueGraph:
 
 
 func test_start_on_first_encounter_emits_choices_shown_via_else_branch() -> void:
-	var events: Array[String] = []
+	# greet's condition (talked_to_villager equals true) is false on a fresh
+	# runner. Per §3's resolution algorithm, a false condition recurses
+	# straight into "else" and returns *without* displaying the gated node
+	# itself — so ask_weather's choices_shown fires immediately on start(),
+	# greet's own line is never shown on this path at all.
+	var lines: Array[String] = []
+	var choice_events: Array[String] = []
+	DialogueRunner.line_shown.connect(
+		func(_speaker: String, text: String) -> void: lines.append(text)
+	)
 	DialogueRunner.choices_shown.connect(
-		func(speaker: String, _text: String, _options: Array) -> void: events.append("choices:%s" % speaker)
+		func(speaker: String, _text: String, _options: Array) -> void: choice_events.append(speaker)
 	)
 	DialogueRunner.start(_fixture_graph())
-	assert_array(events).contains(["choices:Villager"])
+	assert_array(lines).is_empty()
+	assert_array(choice_events).is_equal(["Villager"])
 	assert_bool(DialogueRunner.is_active()).is_true()
 
 
@@ -312,35 +338,45 @@ func test_choose_sets_flag_and_follows_branch_then_advance_ends() -> void:
 	)
 	var ended := false
 	DialogueRunner.ended.connect(func() -> void: ended = true)
-	DialogueRunner.start(_fixture_graph())
+	DialogueRunner.start(_fixture_graph())  # greet -> else -> ask_weather (choices_shown)
 	DialogueRunner.choose(0)  # "Sure." -> sets talked_to_villager, goes to "chat"
 	assert_bool(DialogueRunner.flags.get("talked_to_villager", false)).is_true()
-	assert_array(lines).contains(["The moss has been doing well this week."])
+	assert_array(lines).is_equal(["The moss has been doing well this week."])
 	DialogueRunner.advance()  # chat.next == null -> ends
 	assert_bool(ended).is_true()
 	assert_bool(DialogueRunner.is_active()).is_false()
 
 
 func test_choose_out_of_range_index_is_noop() -> void:
-	DialogueRunner.start(_fixture_graph())
+	DialogueRunner.start(_fixture_graph())  # greet -> else -> ask_weather (choices_shown)
 	DialogueRunner.choose(99)
 	assert_bool(DialogueRunner.is_active()).is_true()
 
 
 func test_advance_on_choices_node_is_noop() -> void:
-	DialogueRunner.start(_fixture_graph())
-	DialogueRunner.advance()
+	DialogueRunner.start(_fixture_graph())  # greet -> else -> ask_weather (choices_shown)
+	DialogueRunner.advance()  # ask_weather has choices, not next -> no-op
 	assert_bool(DialogueRunner.is_active()).is_true()
 
 
-func test_condition_true_follows_next_to_chat_repeat_on_retalk() -> void:
+func test_condition_true_shows_greet_then_advance_follows_next_to_chat_repeat_on_retalk() -> void:
+	# With the flag already set, greet's condition evaluates true, so per
+	# §3 the resolver falls through and displays greet's OWN line first
+	# (its "next" is only followed later via an explicit advance()) —
+	# this is the asymmetric-but-correct behavior: a true condition shows
+	# the gated node itself, a false one skips straight to "else".
 	DialogueRunner.flags["talked_to_villager"] = true
 	var lines: Array[String] = []
 	DialogueRunner.line_shown.connect(
 		func(_speaker: String, text: String) -> void: lines.append(text)
 	)
 	DialogueRunner.start(_fixture_graph())
-	assert_array(lines).contains(["Back again? The moss is still doing wonderfully."])
+	assert_array(lines).is_equal(["Oh! You're the one from the cottage."])
+	DialogueRunner.advance()
+	assert_array(lines).is_equal([
+		"Oh! You're the one from the cottage.",
+		"Back again? The moss is still doing wonderfully.",
+	])
 
 
 func test_condition_false_with_no_else_ends_immediately() -> void:
@@ -364,13 +400,20 @@ func test_current_voice_seed_defaults_to_zero() -> void:
 	assert_int(DialogueRunner.current_voice_seed()).is_equal(0)
 
 
+func test_current_voice_seed_resets_to_zero_after_conversation_ends() -> void:
+	DialogueRunner.start(_fixture_graph(), 42)
+	DialogueRunner.advance()  # greet -> else -> ask_weather (choices_shown)
+	DialogueRunner.choose(1)  # "Not now." -> next: null -> ends
+	assert_int(DialogueRunner.current_voice_seed()).is_equal(0)
+
+
 func test_is_active_false_before_any_start() -> void:
 	assert_bool(DialogueRunner.is_active()).is_false()
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_dialogue_runner.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_dialogue_runner.gd`
 Expected: FAIL — `Identifier "DialogueRunner" not declared` (autoload doesn't exist yet).
 
 - [ ] **Step 3: Write `DialogueRunner` and register the autoload**
@@ -437,6 +480,7 @@ func _resolve(node_id: Variant) -> void:
 	if node_id == null or String(node_id).is_empty():
 		_graph = null
 		_current_node_id = ""
+		_voice_seed = 0
 		ended.emit()
 		return
 	var id: String = node_id
@@ -469,8 +513,8 @@ DialogueRunner="*res://src/core/dialogue_runner.gd"
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_dialogue_runner.gd`
-Expected: PASS (9/9)
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_dialogue_runner.gd`
+Expected: PASS (10/10)
 
 - [ ] **Step 5: Commit**
 
@@ -511,10 +555,13 @@ func test_same_seed_returns_same_cached_instance() -> void:
 	assert_object(a).is_same(b)
 
 
-func test_different_seeds_produce_different_pcm_data() -> void:
+func test_different_seeds_produce_different_pitches() -> void:
+	# Compare actual pitch (zero-crossing rate), not just raw PCM difference —
+	# proves the seeds produce audibly different frequencies, not merely
+	# different-but-same-pitch waveforms.
 	var a := Animalese.blip_for_seed(1)
 	var b := Animalese.blip_for_seed(2)
-	assert_array(a.data).is_not_equal(b.data)
+	assert_int(Animalese._zero_crossings(a)).is_not_equal(Animalese._zero_crossings(b))
 
 
 func test_blip_is_short_mono_16bit() -> void:
@@ -526,7 +573,7 @@ func test_blip_is_short_mono_16bit() -> void:
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_animalese.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_animalese.gd`
 Expected: FAIL — `Animalese` class not found.
 
 - [ ] **Step 3: Write `Animalese`**
@@ -571,11 +618,27 @@ static func blip_for_seed(seed: int) -> AudioStreamWAV:
 	stream.data = data
 	_cache[seed] = stream
 	return stream
+
+
+## Counts sign changes across the decoded 16-bit PCM samples — a simple,
+## test-only proxy for "how many times the wave crossed zero", which rises
+## with frequency. Used by test_animalese.gd to prove two seeds produce
+## audibly different pitches, not just different-but-same-pitch data.
+static func _zero_crossings(stream: AudioStreamWAV) -> int:
+	var crossings := 0
+	var previous := 0
+	for i in stream.data.size() / 2:
+		var sample := stream.data.decode_s16(i * 2)
+		if previous != 0 and sign(sample) != sign(previous) and sample != 0:
+			crossings += 1
+		if sample != 0:
+			previous = sample
+	return crossings
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_animalese.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_animalese.gd`
 Expected: PASS (4/4)
 
 - [ ] **Step 5: Commit**
@@ -625,7 +688,7 @@ func test_on_focus_changed_reshows_prompt_after_force_hide() -> void:
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_interact_prompt.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_interact_prompt.gd`
 Expected: FAIL — `Function "force_hide" not found`.
 
 - [ ] **Step 3: Add `force_hide()`**
@@ -639,7 +702,7 @@ Add this method to `src/interact/interact_prompt.gd`, alongside the existing `on
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_interact_prompt.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_interact_prompt.gd`
 Expected: PASS (2/2)
 
 - [ ] **Step 5: Commit**
@@ -727,11 +790,41 @@ func test_choice_button_press_calls_dialogue_runner_choose() -> void:
 	DialogueRunner.start(_fixture_graph())
 	box.press_choice_button(0)
 	assert_bool(DialogueRunner.is_active()).is_false()
+
+
+func test_number_key_selects_choice_positionally() -> void:
+	var box: DialogueBox = DialogueBoxScene.instantiate()
+	auto_free(box)
+	add_child(box)
+	DialogueRunner.start(_fixture_graph())
+	var runner := scene_runner(box)
+	await runner.simulate_frames(1)
+	runner.simulate_key_pressed(KEY_1)
+	assert_bool(DialogueRunner.is_active()).is_false()
+
+
+func test_line_shown_reveals_text_progressively_over_time() -> void:
+	var box: DialogueBox = DialogueBoxScene.instantiate()
+	auto_free(box)
+	add_child(box)
+	var single_line_json := """
+	{ "start": "only", "nodes": { "only": { "speaker": "Villager", "text": "Hi there.", "next": null } } }
+	"""
+	DialogueRunner.start(DialogueGraph._parse(JSON.parse_string(single_line_json)))
+	var text_label := box.get_node("%TextLabel") as Label
+	assert_str(text_label.text).is_equal("")
+	var runner := scene_runner(box)
+	await runner.simulate_frames(3, 50)  # a couple reveal ticks in, not yet complete
+	var partial := text_label.text
+	assert_bool(partial.length() > 0 and partial.length() < "Hi there.".length()).is_true()
+	assert_bool("Hi there.".begins_with(partial)).is_true()
+	await runner.simulate_frames(20, 50)  # well past the remaining chars * 30ms/char
+	assert_str(text_label.text).is_equal("Hi there.")
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_dialogue_box.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_dialogue_box.gd`
 Expected: FAIL — scene/script not found.
 
 - [ ] **Step 3: Write `dialogue_box.gd`**
@@ -745,7 +838,7 @@ extends Control
 
 const CHAR_REVEAL_INTERVAL := 0.03
 
-@onready var _portrait_bg: ColorRect = %PortraitBg
+@onready var _portrait_bg: Panel = %PortraitBg
 @onready var _portrait_label: Label = %PortraitLabel
 @onready var _speaker_label: Label = %SpeakerLabel
 @onready var _text_label: Label = %TextLabel
@@ -755,10 +848,20 @@ const CHAR_REVEAL_INTERVAL := 0.03
 
 var _full_text := ""
 var _reveal_index := 0
+var _portrait_style: StyleBoxFlat
 
 
 func _ready() -> void:
 	visible = false
+	# Panel (not ColorRect) so a StyleBoxFlat can round the corners into a
+	# circle per spec §4 — a fresh StyleBoxFlat instance per DialogueBox so
+	# recoloring it per-speaker doesn't mutate a shared/default resource.
+	_portrait_style = StyleBoxFlat.new()
+	_portrait_style.corner_radius_top_left = 24
+	_portrait_style.corner_radius_top_right = 24
+	_portrait_style.corner_radius_bottom_left = 24
+	_portrait_style.corner_radius_bottom_right = 24
+	_portrait_bg.add_theme_stylebox_override("panel", _portrait_style)
 	DialogueRunner.line_shown.connect(_on_line_shown)
 	DialogueRunner.choices_shown.connect(_on_choices_shown)
 	DialogueRunner.ended.connect(_on_ended)
@@ -766,10 +869,26 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not visible or _choices_box.get_child_count() > 0:
+	if not visible:
+		return
+	if _choices_box.get_child_count() > 0:
+		_handle_choice_key(event)
 		return
 	if event.is_action_pressed(&"interact"):
 		DialogueRunner.advance()
+
+
+## Number keys 1-9 select choices positionally (spec §4) — not a new
+## InputMap action, deliberately deferring proper menu-navigation input.
+func _handle_choice_key(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.pressed:
+		return
+	var key_event := event as InputEventKey
+	if key_event.keycode < KEY_1 or key_event.keycode > KEY_9:
+		return
+	var index := key_event.keycode - KEY_1
+	if index < _choices_box.get_child_count():
+		press_choice_button(index)
 
 
 func get_choice_button_count() -> int:
@@ -809,11 +928,19 @@ func _show_speaker(speaker: String) -> void:
 	visible = true
 	_speaker_label.text = speaker
 	_portrait_label.text = speaker.substr(0, 1).to_upper()
-	_portrait_bg.color = Color.from_hsv(float(speaker.hash() % 360) / 360.0, 0.55, 0.85)
+	_portrait_style.bg_color = Color.from_hsv(float(speaker.hash() % 360) / 360.0, 0.55, 0.85)
 
 
 func _clear_choices() -> void:
+	# remove_child() is immediate, so get_choice_button_count()/number-key
+	# routing is correct within the same signal-handling turn — a choices->
+	# choices transition must not see stale buttons from the previous node.
+	# queue_free() (not free()) defers the actual object destruction, since a
+	# choice button pressed by the user can still be the object emitting the
+	# very signal that triggered this call — freeing it synchronously would
+	# error ("Object is locked and can't be freed").
 	for child in _choices_box.get_children():
+		_choices_box.remove_child(child)
 		child.queue_free()
 
 
@@ -832,9 +959,22 @@ func _on_reveal_tick() -> void:
 	var ch := _full_text[_reveal_index]
 	_reveal_index += 1
 	_text_label.text = _full_text.substr(0, _reveal_index)
-	if ch.strip_edges() != "" and not ch in [".", ",", "!", "?"]:
+	if _is_voiced_char(ch):
 		_blip_player.stream = Animalese.blip_for_seed(DialogueRunner.current_voice_seed())
 		_blip_player.play()
+
+
+## True for characters that should trigger a blip: not whitespace, and not
+## punctuation. Uses RegEx rather than a fixed list so it isn't silently
+## incomplete for punctuation this codebase's dialogue content ends up
+## needing later (colons, dashes, quotes, ellipses, etc.).
+static var _punctuation_regex := RegEx.create_from_string("[[:punct:]]")
+
+
+func _is_voiced_char(ch: String) -> bool:
+	if ch.strip_edges() == "":
+		return false
+	return not _punctuation_regex.search(ch)
 ```
 
 - [ ] **Step 4: Build `dialogue_box.tscn`**
@@ -843,7 +983,7 @@ Use the `godot-create_scene` and `godot-add_node` MCP tools to build a `Control`
 - `DialogueBox` (Control, script = `dialogue_box.gd`, anchored to bottom-center like `InteractPrompt`, initially `visible = false` is set in code so leave default true in the scene)
   - `Panel` (background box)
     - `HBoxContainer`
-      - `PortraitBg` (`ColorRect`, ~48x48, `unique_name_in_owner`)
+      - `PortraitBg` (`Panel`, ~48x48, `unique_name_in_owner` — corner-radius StyleBoxFlat override applied in code, see `_ready()`)
         - `PortraitLabel` (`Label`, centered, `unique_name_in_owner`)
       - `VBoxContainer`
         - `SpeakerLabel` (`Label`, `unique_name_in_owner`)
@@ -856,10 +996,90 @@ Save via `godot-save_scene` to `res://src/ui/dialogue_box/dialogue_box.tscn`.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_dialogue_box.gd`
-Expected: PASS (4/4)
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_dialogue_box.gd`
+Expected: PASS (6/6)
 
-- [ ] **Step 6: Wire `DialogueBox` + overlap fix into `Player`**
+- [ ] **Step 6: Write the failing Player-wiring test** (append to `tests/unit/test_player.gd`, reusing its existing `_spawn_world()`/`_make_item()`-style helpers if present, or instancing `player.tscn` directly)
+
+```gdscript
+func after_test() -> void:
+	DialogueRunner.flags = {}
+	DialogueRunner._graph = null
+	DialogueRunner._current_node_id = ""
+	DialogueRunner._voice_seed = 0
+
+
+func test_dialogue_line_shown_force_hides_interact_prompt_even_if_already_visible() -> void:
+	var player: Player = preload("res://src/player/player.tscn").instantiate()
+	auto_free(player)
+	add_child(player)
+	var prompt := player.get_node("%InteractPrompt") as InteractPrompt
+	var item := Interactable.new()
+	auto_free(item)
+	prompt.on_focus_changed(item)  # simulate focus already held
+	assert_bool(prompt.visible).is_true()
+	DialogueRunner.line_shown.emit("Villager", "Hi.")
+	assert_bool(prompt.visible).is_false()
+
+
+func test_dialogue_choices_shown_force_hides_interact_prompt_with_real_focus() -> void:
+	# Uses the real test_interact.gd-style focus-simulation pattern (not a
+	# faked on_focus_changed() call) so the prompt is genuinely visible via
+	# FocusResolver before we assert force_hide() reacts to choices_shown —
+	# this is the actual path the first demo conversation takes on first
+	# encounter (condition-false -> else -> choices_shown immediately).
+	var arena := Node3D.new()
+	auto_free(arena)
+	var player: Player = preload("res://src/player/player.tscn").instantiate()
+	player.input_enabled = false
+	arena.add_child(player)
+	var item := Interactable.new()
+	item.position = Vector3(0, 1, -1.5)  # in front of player, within reach
+	arena.add_child(item)
+	var runner := scene_runner(arena)
+	await runner.simulate_frames(15)  # let FocusResolver's real evaluate() focus `item`
+	var resolver := player.get_node("%FocusResolver") as FocusResolver
+	assert_object(resolver.focused()).is_same(item)  # sanity-check the real focus state
+	var prompt := player.get_node("%InteractPrompt") as InteractPrompt
+	assert_bool(prompt.visible).is_true()
+	DialogueRunner.choices_shown.emit("Villager", "Nice day?", ["Sure is.", "Not really."])
+	assert_bool(prompt.visible).is_false()
+
+
+func test_dialogue_ended_reshows_prompt_via_current_focus() -> void:
+	var arena := Node3D.new()
+	auto_free(arena)
+	var player: Player = preload("res://src/player/player.tscn").instantiate()
+	player.input_enabled = false
+	arena.add_child(player)
+	var item := Interactable.new()
+	item.position = Vector3(0, 1, -1.5)  # in front of player, within reach
+	arena.add_child(item)
+	var runner := scene_runner(arena)
+	await runner.simulate_frames(15)  # let FocusResolver's real evaluate() focus `item`
+	var resolver := player.get_node("%FocusResolver") as FocusResolver
+	assert_object(resolver.focused()).is_same(item)  # sanity-check the real focus state
+	var prompt := player.get_node("%InteractPrompt") as InteractPrompt
+	prompt.force_hide()
+	DialogueRunner.ended.emit()
+	assert_bool(prompt.visible).is_true()
+
+
+func test_dialogue_ended_reenables_player_input() -> void:
+	var player: Player = preload("res://src/player/player.tscn").instantiate()
+	auto_free(player)
+	add_child(player)
+	player.input_enabled = false
+	DialogueRunner.ended.emit()
+	assert_bool(player.input_enabled).is_true()
+```
+
+- [ ] **Step 7: Run test to verify it fails**
+
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_player.gd`
+Expected: FAIL — `Player` doesn't yet react to `DialogueRunner` signals.
+
+- [ ] **Step 8: Wire `DialogueBox` + overlap fix into `Player`**
 
 Using `godot-add_node`, instance `res://src/ui/dialogue_box/dialogue_box.tscn` as a new child of `HUD` in `src/player/player.tscn`, as a sibling of `InteractPrompt`.
 
@@ -885,19 +1105,19 @@ func _ready() -> void:
 	DialogueRunner.ended.connect(func() -> void: input_enabled = true)
 ```
 
-- [ ] **Step 7: Run the full existing player/interact suite to check for regressions**
+- [ ] **Step 9: Run the full existing player/interact suite to check for regressions**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_player.gd -a tests/unit/test_interact.gd -a tests/unit/test_interact_prompt.gd -a tests/unit/test_dialogue_box.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_player.gd -a tests/unit/test_interact.gd -a tests/unit/test_interact_prompt.gd -a tests/unit/test_dialogue_box.gd`
 Expected: PASS (all, apart from the pre-existing `test_hysteresis_keeps_focus_against_marginal_rival` flake noted in the spec's baseline).
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add src/ui/dialogue_box/ src/player/player.tscn src/player/player.gd tests/unit/test_dialogue_box.gd
+git add src/ui/dialogue_box/ src/player/player.tscn src/player/player.gd tests/unit/test_dialogue_box.gd tests/unit/test_player.gd
 git commit -m "feat(dialogue): add DialogueBox UI, wire InteractPrompt overlap fix and input pause into Player"
 ```
 
-**Chunk 2 complete when:** all four test files above pass, and `Player._ready()` wires `DialogueBox`/`InteractPrompt`/input pause exactly per spec §4/§6.
+**Chunk 2 complete when:** all test files above pass, and `Player._ready()` wires `DialogueBox`/`InteractPrompt`/input pause exactly per spec §4/§6.
 
 ---
 
@@ -945,7 +1165,7 @@ git commit -m "feat(dialogue): add DialogueBox UI, wire InteractPrompt overlap f
 
 - [ ] **Step 2: Validate it loads via a quick one-off check**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_dialogue_graph.gd` (regression check only — no test targets this file directly yet; Task 7 covers that via the integration test).
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_dialogue_graph.gd` (regression check only — no test targets this file directly yet; Task 7 covers that via the integration test).
 
 - [ ] **Step 3: Commit**
 
@@ -960,13 +1180,15 @@ git commit -m "feat(dialogue): add demo_villager.json dialogue content"
 - Modify: `src/world/cottage_garden/cottage_garden.gd`
 - Modify: `tests/unit/test_cottage_garden.gd`
 
-- [ ] **Step 1: Write the failing test** (append to existing file)
+- [ ] **Step 1: Write the failing test** (append to existing file; this suite already has an `after_test()` hook from the T4.5 clock work resetting `GameClock.debug_override_hour` — merge the new `DialogueRunner` reset lines into that *same* function rather than adding a second `after_test()`, since gdUnit only calls one per suite)
 
 ```gdscript
 func after_test() -> void:
+	GameClock.debug_override_hour = null
 	DialogueRunner.flags = {}
 	DialogueRunner._graph = null
 	DialogueRunner._current_node_id = ""
+	DialogueRunner._voice_seed = 0
 
 
 func test_demo_villager_has_talk_interactable() -> void:
@@ -987,16 +1209,16 @@ func test_interacting_with_demo_villager_starts_and_can_end_dialogue() -> void:
 	var talk := villager.find_children("*", "Interactable", true, false)[0] as Interactable
 	talk.interact(self)
 	assert_bool(DialogueRunner.is_active()).is_true()
-	# First encounter routes into ask_weather's choices; pick "Not now." to end.
+	# First encounter has no flags set, so greet's condition is false and it
+	# routes via "else" into ask_weather's choices; pick index 1 ("Not now.",
+	# next: null) to end the conversation cleanly.
 	DialogueRunner.choose(1)
 	assert_bool(DialogueRunner.is_active()).is_false()
 ```
 
-Note: if `test_cottage_garden.gd` already has an `after_test()` hook from the T4.5 work, merge the `DialogueRunner` reset lines into it rather than adding a second `after_test()` (gdUnit only calls one per suite).
-
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_cottage_garden.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_cottage_garden.gd`
 Expected: FAIL — no `Interactable` child found under `DemoVillager`.
 
 - [ ] **Step 3: Wire it up in `cottage_garden.gd`**
@@ -1031,7 +1253,7 @@ func _on_demo_villager_interacted(by: Node, voice_seed: int) -> void:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit/test_cottage_garden.gd`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit/test_cottage_garden.gd`
 Expected: PASS (all, including the two new tests)
 
 - [ ] **Step 5: Commit**
@@ -1048,12 +1270,12 @@ git commit -m "feat(dialogue): wire demo villager Interactable to DialogueRunner
 
 - [ ] **Step 1: Run the full gdUnit suite**
 
-Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a tests/unit`
+Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a tests/unit`
 Expected: all new dialogue-related tests pass; the 3 pre-existing baseline failures noted in the spec (`test_avatar.gd` ×2 missing clips, `test_interact.gd`'s hysteresis flake) are the only failures, unchanged from before this work. If any *other* test fails, treat it as a regression and fix before proceeding.
 
 - [ ] **Step 2: Manual smoke test (optional but recommended given this is UI-facing)**
 
-Use `godot-run_project` on `res://src/world/cottage_garden/cottage_garden.tscn`, walk to the demo villager, press `E`, confirm the dialogue box appears, choices work, animalese blips play, and `E` closes/advances correctly; confirm the `InteractPrompt` never overlaps the box.
+Use the Godot MCP `godot-run_project` tool (or, if unavailable, run `res://src/world/cottage_garden/cottage_garden.tscn` locally via the Godot editor/`--path .` in windowed mode) on `res://src/world/cottage_garden/cottage_garden.tscn`, walk to the demo villager, press `E`, confirm the dialogue box appears, choices work, animalese blips play, and `E` closes/advances correctly; confirm the `InteractPrompt` never overlaps the box.
 
 - [ ] **Step 3: Update `ROADMAP.md`**
 
