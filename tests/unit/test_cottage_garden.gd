@@ -95,3 +95,48 @@ func test_interacting_with_demo_villager_starts_and_can_end_dialogue() -> void:
 	# next: null) to end the conversation cleanly.
 	DialogueRunner.choose(1)
 	assert_bool(DialogueRunner.is_active()).is_false()
+
+
+## Regression test for the "single E press both ends AND restarts dialogue"
+## bug: a real E keypress that resolves a line to its end (next: null) via
+## DialogueRunner.advance() delivers to both DialogueBox._unhandled_input
+## (which ends the conversation) and Player._unhandled_input (which
+## re-triggers Interactable.interact() on the still-focused villager) within
+## the SAME input dispatch, because input_enabled flips true synchronously
+## off DialogueRunner.ended before the event finishes propagating.
+func test_ending_dialogue_via_interact_key_does_not_immediately_restart_it() -> void:
+	var runner := scene_runner(COTTAGE_GARDEN_SCENE)
+	await runner.simulate_frames(10)
+	var garden := runner.scene()
+	var player := garden.get_node("Player")
+	var villager := garden.get_node("DemoVillager")
+
+	player.global_position = villager.global_position + Vector3(0, 0, 1.0)
+	player.look_at(villager.global_position + Vector3(0, player.global_position.y, 0), Vector3.UP)
+	await runner.simulate_frames(5)
+
+	# Start dialogue, then choose "Sure." (index 0) directly (not via a
+	# keypress) so we land on "chat", whose next is null — the following E
+	# press is the one whose own advance() call ends the conversation.
+	runner.simulate_action_press("interact")
+	await runner.simulate_frames(2)
+	runner.simulate_action_release("interact")
+	await runner.simulate_frames(2)
+	DialogueRunner.choose(0)
+	await runner.simulate_frames(2)
+	assert_bool(DialogueRunner.is_active()).override_failure_message(
+		"expected dialogue still active, showing 'chat' line"
+	).is_true()
+
+	# Player is still standing in front of (and facing) the villager, so
+	# FocusResolver still has it focused. This single E press both ends the
+	# conversation (chat's next is null) and, if the event isn't marked
+	# handled, also reaches Player._unhandled_input in the same dispatch and
+	# immediately restarts it.
+	runner.simulate_action_press("interact")
+	await runner.simulate_frames(2)
+	runner.simulate_action_release("interact")
+	await runner.simulate_frames(2)
+	assert_bool(DialogueRunner.is_active()).override_failure_message(
+		"a single interact keypress that ends dialogue should not also restart it"
+	).is_false()

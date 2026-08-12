@@ -44,6 +44,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed(&"interact"):
 		DialogueRunner.advance()
+		# Consume this event so it doesn't also reach Player._unhandled_input
+		# in the same input dispatch — advancing to the end of a
+		# conversation flips DialogueRunner.ended synchronously, which
+		# re-enables Player.input_enabled before this same keypress finishes
+		# propagating. Without this, the same E press that ends a
+		# conversation also re-triggers FocusResolver.interact_focused() on
+		# the still-focused villager, instantly restarting it.
+		get_viewport().set_input_as_handled()
 
 
 ## Number keys 1-9 select choices positionally (spec §4) — not a new
@@ -57,6 +65,7 @@ func _handle_choice_key(event: InputEvent) -> void:
 	var index := key_event.keycode - KEY_1
 	if index < _choices_box.get_child_count():
 		press_choice_button(index)
+		get_viewport().set_input_as_handled()
 
 
 func get_choice_button_count() -> int:
