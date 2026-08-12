@@ -1,0 +1,30 @@
+{
+  "start": "greet",
+  "nodes": {
+    "greet": {
+      "speaker": "Villager",
+      "text": "Oh! You're the one from the cottage.",
+      "condition": { "flag": "talked_to_villager", "equals": true },
+      "next": "chat_repeat",
+      "else": "ask_weather"
+    },
+    "ask_weather": {
+      "speaker": "Villager",
+      "text": "Fancy some small talk?",
+      "choices": [
+        { "text": "Sure.", "next": "chat", "set_flag": "talked_to_villager" },
+        { "text": "Not now.", "next": null }
+      ]
+    },
+    "chat": {
+      "speaker": "Villager",
+      "text": "The moss has been doing well this week.",
+      "next": null
+    },
+    "chat_repeat": {
+      "speaker": "Villager",
+      "text": "Back again? The moss is still doing wonderfully.",
+      "next": null
+    }
+  }
+}
