@@ -326,6 +326,15 @@ conventions (`tests/unit/test_*.gd`, `scene_runner` for scene-level tests):
   encounter, call `DialogueRunner.choose(1)` — "Not now." — to reach `next:
   null` and end the conversation; assert `is_active()` becomes false) — a
   real integration check, not just a signal-connection existence check.
+- `test_interact_prompt.gd` (extend existing coverage, or add if none
+  exists yet) — covers the §4 overlap-fix lifecycle directly: with the
+  prompt already visible (simulating focus already held before dialogue
+  starts), calling the equivalent of `line_shown`/`choices_shown` wiring
+  (i.e. `prompt.force_hide()`) hides it regardless of prior visibility;
+  then simulating `ended`'s wiring (`prompt.on_focus_changed(interactable)`
+  with a non-null interactable, standing in for `resolver.focused()`)
+  correctly re-shows it — locking in the round-4/5 fix so a future refactor
+  can't silently reintroduce the overlap bug.
 
 ## 8. Risks / open questions carried forward (not blocking this slice)
 
