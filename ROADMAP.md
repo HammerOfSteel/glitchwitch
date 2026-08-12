@@ -104,7 +104,15 @@ procedural approach, adapted to Godot's mesh/scene conventions.
   signpost), budget-tested against the same 150k tri / 120 draw call
   ceiling as `cottage_garden`/`cottage_interior`
   (see `docs/superpowers/plans/2026-08-12-hedgerow-lane.md`)
-- T4.5 Time-of-day + weather-lite + clock service (Patch Day weekday math, drift hooks)
+- T4.5 Time-of-day + clock service ✅ done — `GameClock` autoload
+  (real-time-synced hour/weekday/date, Patch Day weekday math verified),
+  `TimeOfDayCurve` pure lighting-interpolation helper, `TimeOfDayRig` node
+  driving `Sun`/`Fill` lighting from the clock, wired into `cottage_garden`
+  and `hedgerow_lane` (see
+  `docs/superpowers/specs/2026-08-12-clock-time-of-day-design.md` and
+  `docs/superpowers/plans/2026-08-12-clock-time-of-day.md`); weather-lite
+  and Patch Day drift hooks are deferred as separate follow-up work per the
+  spec's explicit scope split
 
 ## Phase 5 — Narrative Spine (`phase/05-spine`)
 - T5.1 Dialogue engine (JSON graphs, conditions, portraits, animalese voices)
@@ -177,7 +185,7 @@ procedural approach, adapted to Godot's mesh/scene conventions.
 | 1 — Player & Camera | `phase/01-player-camera` | ✅ complete |
 | 2 — Character Foundation | `phase/02-character-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
 | 3 — Nature & Building Foundation | `phase/03-nature-building-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
-| 4 — World & Time | `phase/04-world` | 🚧 in progress — T4.1–T4.4 done, T4.5 next (proceeds on placeholders, see pivot spec) |
+| 4 — World & Time | `phase/04-world` | 🚧 in progress — T4.1–T4.5 clock/time-of-day done, weather-lite + drift hooks deferred (proceeds on placeholders, see pivot spec) |
 | 5–12 | — | 📋 planned |
 
 At each gate: suites fully green, playable artifact, docs updated.
