@@ -4,6 +4,10 @@ extends GdUnitTestSuite
 
 
 func after_test() -> void:
+	# GameClock is a real autoload shared across the whole test run; reset
+	# here (not a plain statement at the end of the test body) so a failed
+	# assertion above can't leak a stale override into later tests. Mirrors
+	# the same fix applied to test_game_clock.gd.
 	GameClock.debug_override_hour = null
 
 

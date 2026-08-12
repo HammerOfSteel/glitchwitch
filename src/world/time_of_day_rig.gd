@@ -5,10 +5,10 @@ extends Node
 ## Add as a child node in a zone's .tscn, sibling to its Sun/Fill lights.
 ## See docs/superpowers/specs/2026-08-12-clock-time-of-day-design.md.
 
-const UPDATE_INTERVAL_SEC := 1.0
-
 @export var sun_path: NodePath = ^"../Sun"
 @export var fill_path: NodePath = ^"../Fill"
+
+const UPDATE_INTERVAL_SEC := 1.0
 
 var _sun: DirectionalLight3D
 var _fill: DirectionalLight3D
