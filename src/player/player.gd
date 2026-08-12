@@ -23,6 +23,7 @@ var _step_accumulator := 0.0
 
 
 func _ready() -> void:
+	var dialogue_runner := get_node("/root/DialogueRunner") as DialogueRunnerService
 	var rig := _camera_rig()
 	if rig != null:
 		rig.mode_changed.connect(_on_camera_mode_changed)
@@ -30,9 +31,21 @@ func _ready() -> void:
 	var prompt := get_node_or_null("%InteractPrompt") as InteractPrompt
 	if resolver != null and prompt != null:
 		resolver.focus_changed.connect(prompt.on_focus_changed)
+	if prompt != null:
+		dialogue_runner.line_shown.connect(prompt.force_hide.unbind(2))
+		dialogue_runner.choices_shown.connect(prompt.force_hide.unbind(3))
+		if resolver != null:
+			dialogue_runner.ended.connect(
+				func() -> void:
+					var live_prompt := get_node_or_null("%InteractPrompt") as InteractPrompt
+					var live_resolver := _focus_resolver()
+					if live_prompt != null and live_resolver != null:
+						live_prompt.on_focus_changed(live_resolver.focused())
+			)
 	var avatar := get_node_or_null("%Avatar") as WrenAvatar
 	if avatar != null:
 		motion_changed.connect(avatar.set_motion_state)
+	dialogue_runner.ended.connect(func() -> void: input_enabled = true)
 
 
 func _unhandled_input(event: InputEvent) -> void:
