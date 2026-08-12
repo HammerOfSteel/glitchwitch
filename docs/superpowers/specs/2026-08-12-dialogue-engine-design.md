@@ -218,7 +218,8 @@ shape as `TimeOfDayCurve`).
 - `DialogueBox` reveals `text` one character at a time (typewriter effect,
   fixed interval e.g. 30ms/char) via a `Timer`, and for each revealed
   non-whitespace/non-punctuation character, plays
-  `Animalese.blip_for_seed(current_speaker_seed)` through a single
+  `Animalese.blip_for_seed(DialogueRunner.current_voice_seed())` through a
+  single
   `AudioStreamPlayer` child (retriggering `play()` — brief overlaps are fine
   and match the genre's chattery feel).
 - `DialogueBox` reveals `text` one character at a time (typewriter effect,
@@ -248,19 +249,26 @@ shape as `TimeOfDayCurve`).
   villager.add_child(talk)
   talk.interacted.connect(_on_demo_villager_interacted.bind(dna.seed))
   ```
-  (`Interactable` extends `Area3D` and needs *some* collision shape to be
-  reachable by `FocusResolver`'s group-scan/distance check — reuse a small
-  `CollisionShape3D` with a `SphereShape3D`, added the same way, sized to
-  roughly the villager's reach radius.)
+  (`Interactable` extends `Area3D`, but `FocusResolver` doesn't do
+  physics/area-overlap queries — it just scans the `"interactables"` group
+  and checks `global_position` directly, so no `CollisionShape3D` is
+  required for `talk` to be reachable; one isn't added.)
 - The handler:
   ```gdscript
   func _on_demo_villager_interacted(by: Node, voice_seed: int) -> void:
+      var graph := DialogueGraph.load_from_file("res://data/dialogue/demo_villager.json")
+      if graph == null:
+          push_error("demo_villager.json failed to load/validate")
+          return
       var player := by as Player
       if player != null:
           player.input_enabled = false
-      var graph := DialogueGraph.load_from_file("res://data/dialogue/demo_villager.json")
       DialogueRunner.start(graph, voice_seed)
   ```
+  Loading and validating the graph happens *before* touching
+  `player.input_enabled`, so a malformed/missing dialogue file simply
+  no-ops (logs an error, player stays in control) instead of stranding the
+  player with movement disabled and no conversation to end it.
   `by` is the node passed into `Interactable.interact(by)`, which traces
   back to `FocusResolver.interact_focused(by)`'s caller — `Player`'s own
   `_unhandled_input` calls `resolver.interact_focused(self)`, so `by` is
@@ -304,10 +312,11 @@ conventions (`tests/unit/test_*.gd`, `scene_runner` for scene-level tests):
   a child `Interactable` with `verb == "Talk"` and that its `interacted`
   signal is connected to something that ends up calling
   `DialogueRunner.start` (practically: trigger `interact()` on it and
-  assert `DialogueRunner.is_active()` becomes true, then assert it's false
-  again after driving `DialogueRunner` to `ended` via `advance()` calls
-  through the demo script's actual node count) — a real integration check,
-  not just a signal-connection existence check.
+  assert `DialogueRunner.is_active()` becomes true; then, since the demo
+  graph's `greet` node routes into `ask_weather`'s `choices` on a first
+  encounter, call `DialogueRunner.choose(1)` — "Not now." — to reach `next:
+  null` and end the conversation; assert `is_active()` becomes false) — a
+  real integration check, not just a signal-connection existence check.
 
 ## 8. Risks / open questions carried forward (not blocking this slice)
 
