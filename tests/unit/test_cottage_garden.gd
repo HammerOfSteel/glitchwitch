@@ -66,3 +66,32 @@ func test_cottage_garden_has_time_of_day_rig_driving_sun_and_fill() -> void:
 
 func after_test() -> void:
 	GameClock.debug_override_hour = null
+	DialogueRunner.flags = {}
+	DialogueRunner._graph = null
+	DialogueRunner._current_node_id = ""
+	DialogueRunner._voice_seed = 0
+
+
+func test_demo_villager_has_talk_interactable() -> void:
+	var world := preload("res://src/world/cottage_garden/cottage_garden.tscn").instantiate()
+	auto_free(world)
+	add_child(world)
+	var villager := world.get_node("DemoVillager")
+	var talk := villager.find_children("*", "Interactable", true, false)
+	assert_int(talk.size()).is_equal(1)
+	assert_str((talk[0] as Interactable).verb).is_equal("Talk")
+
+
+func test_interacting_with_demo_villager_starts_and_can_end_dialogue() -> void:
+	var world := preload("res://src/world/cottage_garden/cottage_garden.tscn").instantiate()
+	auto_free(world)
+	add_child(world)
+	var villager := world.get_node("DemoVillager")
+	var talk := villager.find_children("*", "Interactable", true, false)[0] as Interactable
+	talk.interact(self)
+	assert_bool(DialogueRunner.is_active()).is_true()
+	# First encounter has no flags set, so greet's condition is false and it
+	# routes via "else" into ask_weather's choices; pick index 1 ("Not now.",
+	# next: null) to end the conversation cleanly.
+	DialogueRunner.choose(1)
+	assert_bool(DialogueRunner.is_active()).is_false()
