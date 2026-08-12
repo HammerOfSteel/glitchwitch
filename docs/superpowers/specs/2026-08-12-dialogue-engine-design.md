@@ -136,8 +136,14 @@ API:
 - `choose(index: int) -> void` — no-op if the current node doesn't have
   `choices` or `index` is out of range; otherwise applies `set_flag` (if
   present) then follows that choice's `next` and resolves.
-- `is_active() -> bool` — true whenever a conversation is in progress; used
-  by `Player` to suppress movement/interaction input for the duration.
+- `is_active() -> bool` — true whenever a conversation is in progress.
+  Exposed as the source of truth for "is a conversation open", but note
+  `Player` does not poll it every frame to gate input (see §6) — pausing
+  and resuming happens explicitly at the two lifecycle edges (interact
+  triggers `start()`, `DialogueRunner.ended` fires), which is sufficient
+  and avoids per-frame polling. `is_active()` remains useful for tests and
+  any other code that needs a point-in-time check (e.g. §7's integration
+  test).
 - `current_voice_seed() -> int` — the `voice_seed` passed to the active
   `start()` call (or the default), read by `DialogueBox` to drive
   `Animalese` (see §5).
@@ -215,13 +221,6 @@ shape as `TimeOfDayCurve`).
   used elsewhere in this codebase — e.g. `VillagerDna.random()`). Cached
   per seed (a small `Dictionary[int, AudioStreamWAV]` inside `Animalese`) so
   repeated calls for the same speaker don't re-synthesize every keystroke.
-- `DialogueBox` reveals `text` one character at a time (typewriter effect,
-  fixed interval e.g. 30ms/char) via a `Timer`, and for each revealed
-  non-whitespace/non-punctuation character, plays
-  `Animalese.blip_for_seed(DialogueRunner.current_voice_seed())` through a
-  single
-  `AudioStreamPlayer` child (retriggering `play()` — brief overlaps are fine
-  and match the genre's chattery feel).
 - `DialogueBox` reveals `text` one character at a time (typewriter effect,
   fixed interval e.g. 30ms/char) via a `Timer`, and for each revealed
   non-whitespace/non-punctuation character, plays
