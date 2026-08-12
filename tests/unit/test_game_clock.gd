@@ -3,10 +3,16 @@ extends GdUnitTestSuite
 ## docs/superpowers/specs/2026-08-12-clock-time-of-day-design.md.
 
 
+func after_test() -> void:
+	# GameClock is a real autoload shared across the whole test run; reset
+	# the debug hook unconditionally so a failed assertion above can't leak
+	# a stale override into unrelated tests run later in the same suite.
+	GameClock.debug_override_hour = null
+
+
 func test_debug_override_hour_bypasses_real_system_time() -> void:
 	GameClock.debug_override_hour = 14.5
 	assert_float(GameClock.hour_of_day()).is_equal_approx(14.5, 0.001)
-	GameClock.debug_override_hour = null
 
 
 func test_weekday_returns_value_in_enum_range() -> void:
