@@ -191,13 +191,23 @@ Behavior:
     line), populate one `Button` per option, hide on button `pressed`
     calling `DialogueRunner.choose(i)`.
   - `ended`: hide the box.
-- **`InteractPrompt` overlap**: `InteractPrompt.on_focus_changed()` gains a
-  guard clause at its top — `if DialogueRunner.is_active(): visible = false;
-  return` — so it stays hidden for the whole conversation regardless of
-  what `FocusResolver` reports (which keeps running every physics frame
-  independent of `Player.input_enabled`; forcing the hide in
-  `InteractPrompt` itself, rather than trying to pause `FocusResolver`, is
-  the minimal fix and doesn't touch `FocusResolver` at all).
+- **`InteractPrompt` overlap**: `InteractPrompt` gains one new public
+  method, `func force_hide() -> void: visible = false`, keeping it
+  otherwise unaware of `DialogueRunner` (it stays a purely presentational
+  component, per its existing doc comment). The wiring lives in `Player`,
+  which already connects `resolver.focus_changed` to `prompt.on_focus_changed`
+  in `_ready()` — it additionally connects `DialogueRunner.line_shown` and
+  `DialogueRunner.choices_shown` to `prompt.force_hide`, and
+  `DialogueRunner.ended` to a small handler that calls
+  `prompt.on_focus_changed(resolver.focused())` (using `FocusResolver`'s
+  existing `focused()` getter) so the prompt's visibility is corrected
+  immediately based on current focus, rather than waiting for a fresh
+  `focus_changed` event. This direct connection is necessary because
+  `focus_changed` only fires when the focused interactable *changes* — if
+  the player is already focused on the villager (prompt already visible)
+  when they press interact, no new `focus_changed` event occurs, so
+  relying on that signal alone would leave the prompt overlapping the
+  dialogue box for the whole conversation.
 - Input: while the box is visible and no choices are shown, pressing the
   existing `interact` action (bound to `E`) calls
   `DialogueRunner.advance()` — reuses the interact key already used to open
