@@ -85,6 +85,11 @@ func test_cottage_garden_has_ansel_rowe_patrolling_and_torben_ask_standing() -> 
 		. override_failure_message("expected Torben Ask to stand still (no patrol_points)")
 		. is_true()
 	)
+	(
+		assert_float((torben as RiggedNpc).mesh_scale)
+		. override_failure_message("expected Torben Ask to be scaled up (his import is shorter)")
+		. is_greater(1.0)
+	)
 
 	# Ansel walks his patrol loop, so his position moves over the 10
 	# simulated frames above rather than staying wherever he started.

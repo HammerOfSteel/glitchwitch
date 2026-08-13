@@ -13,9 +13,13 @@ const DEMO_VILLAGER_DIALOGUE_PATH := "res://data/dialogue/villager_a.json"
 const ANSEL_ROWE_VOICE_SEED := 20260813
 const TORBEN_ASK_VOICE_SEED := 20260814
 
-const ANSEL_ROWE_MESH_PATH := "res://assets/thirdparty/meshy-ai/NPCs/rigged/ansel_rowe/ansel_rowe.glb"
+const ANSEL_ROWE_MESH_PATH := (
+	"res://assets/thirdparty/meshy-ai/NPCs/rigged/ansel_rowe/" + "ansel_rowe.glb"
+)
 const ANSEL_ROWE_DIALOGUE_PATH := "res://data/dialogue/ansel_rowe.json"
-const TORBEN_ASK_MESH_PATH := "res://assets/thirdparty/meshy-ai/NPCs/rigged/torben_ask/torben_ask.glb"
+const TORBEN_ASK_MESH_PATH := (
+	"res://assets/thirdparty/meshy-ai/NPCs/rigged/torben_ask/" + "torben_ask.glb"
+)
 const TORBEN_ASK_DIALOGUE_PATH := "res://data/dialogue/torben_ask.json"
 
 # Ansel's postal round: a loop clear of the well/crate (x=5), planters/
@@ -77,6 +81,10 @@ func _add_torben_ask() -> void:
 	torben.display_name = "Torben Ask"
 	torben.dialogue_path = TORBEN_ASK_DIALOGUE_PATH
 	torben.voice_seed = TORBEN_ASK_VOICE_SEED
+	# Torben's Meshy export imports noticeably shorter than Ansel/Wren
+	# (~1.46m vs. ~1.7m — see docs/character-inventory.md), which reads as
+	# too small for a burly forester; scale him up to stand out.
+	torben.mesh_scale = 1.5
 	torben.position = Vector3(-3.5, 0.0, -3.2)
 	torben.rotation.y = PI
 	add_child(torben)

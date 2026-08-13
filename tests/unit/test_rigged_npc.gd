@@ -206,6 +206,37 @@ func test_resumes_patrolling_after_dialogue_ends() -> void:
 	)
 
 
+func test_mesh_scale_defaults_to_one() -> void:
+	var npc := _build_npc()
+	add_child(npc)
+	await get_tree().process_frame
+
+	var body := npc.get_child(0) as Node3D
+	(
+		assert_vector(body.scale)
+		. override_failure_message("expected the mesh body to be unscaled by default")
+		. is_equal_approx(Vector3.ONE, Vector3.ONE * 0.001)
+	)
+
+
+func test_mesh_scale_export_scales_the_instanced_body() -> void:
+	var npc := RiggedNpc.new()
+	npc.mesh_scene_path = TEST_MESH_PATH
+	npc.display_name = "Test Forester"
+	npc.dialogue_path = TEST_DIALOGUE_PATH
+	npc.mesh_scale = 1.3
+	auto_free(npc)
+	add_child(npc)
+	await get_tree().process_frame
+
+	var body := npc.get_child(0) as Node3D
+	(
+		assert_vector(body.scale)
+		. override_failure_message("expected mesh_scale to uniformly scale the instanced body")
+		. is_equal_approx(Vector3.ONE * 1.3, Vector3.ONE * 0.001)
+	)
+
+
 func after_test() -> void:
 	DialogueRunner.flags = {}
 	DialogueRunner._graph = null

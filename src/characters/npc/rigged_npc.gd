@@ -28,6 +28,13 @@ enum State { PATROLLING, TALKING }
 @export var idle_clip := "idle"
 @export var walk_clip := "walk"
 
+## Uniform scale applied to the instanced mesh body. Meshy AI exports vary
+## in their character's real-world height (e.g. Torben Ask imports ~1.46m
+## tall vs. Ansel Rowe/Wren's ~1.7m — see docs/character-inventory.md), so
+## this lets a zone author size an individual NPC without touching the
+## source asset.
+@export var mesh_scale := 1.0
+
 ## Parent-local waypoints to loop through, in order. Empty means "stand
 ## still and idle" (no patrol).
 @export var patrol_points: Array[Vector3] = []
@@ -56,6 +63,7 @@ func _ready() -> void:
 			# without this the NPC stands facing backward relative to how
 			# a zone author would naturally place it.
 			body.rotation.y = PI
+			body.scale = Vector3.ONE * mesh_scale
 			var players := body.find_children("*", "AnimationPlayer", true, false)
 			if not players.is_empty():
 				_anim = players[0] as AnimationPlayer
