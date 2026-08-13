@@ -18,7 +18,7 @@ not a commitment to keep building it procedurally in-house.
 
 | Asset ID | Category | Subtype | Procedural/Handcrafted | Rig/Anim | Dependencies | Priority | Gameplay dependency | Status |
 |---|---|---|---|---|---|---|---|---|
-| wren | character | witch (player) | placeholder: Seren (Meshy AI) rigged/animated body | idle/walk/run clips (no wave/stir) | `tools/assetgen/placeholders/fetch_wren_placeholder.py` | P0 | Phase 1 player avatar | placeholder (external art pending) |
+| wren | character | witch (player) | sourced: Meshy AI dressed/rigged/animated body | idle/walk/run clips (no wave/stir yet — not in Meshy's stock anim library) | `tools/assetgen/meshy_import/import_wren_meshy.py` | P0 | Phase 1 player avatar | sourced (Meshy AI) |
 | sigrid-barm | character | villager (baker) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8 cast wave 1 | planned |
 | ansel-rowe | character | villager (postman) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8 cast wave 1; The Last Route | planned |
 | maud-tressel | character | villager (elder) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8; Echoes in the Wallpaper | planned |
