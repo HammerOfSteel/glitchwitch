@@ -1,0 +1,30 @@
+{
+  "start": "greet",
+  "nodes": {
+    "greet": {
+      "speaker": "Villager",
+      "text": "Oh, hello again!",
+      "condition": { "flag": "talked_to_villager_a", "equals": true },
+      "next": "chat_repeat",
+      "else": "ask_basket"
+    },
+    "ask_basket": {
+      "speaker": "Villager",
+      "text": "Mind the basket — fresh from market. Got a minute to chat?",
+      "choices": [
+        { "text": "Sure.", "next": "chat", "set_flag": "talked_to_villager_a" },
+        { "text": "Not now.", "next": null }
+      ]
+    },
+    "chat": {
+      "speaker": "Villager",
+      "text": "Prices are up again this week, but at least the apples came in sweet.",
+      "next": null
+    },
+    "chat_repeat": {
+      "speaker": "Villager",
+      "text": "Still hunting for the last of the good apples, if you ask me.",
+      "next": null
+    }
+  }
+}

@@ -38,7 +38,7 @@ func test_cottage_garden_has_demo_villager() -> void:
 	assert_object(villager).override_failure_message(
 		"expected a DemoVillager node in cottage_garden.tscn"
 	).is_not_null()
-	assert_bool(villager is VillagerInstance).is_true()
+	assert_bool(villager is StaticNpc).is_true()
 
 
 func test_cottage_garden_has_time_of_day_rig_driving_sun_and_fill() -> void:
