@@ -26,6 +26,7 @@ extends Node3D
 @export var sway_speed := 0.8
 
 var _mesh_root: Node3D
+var _ground_lift := 0.0
 var _time := 0.0
 # Per-instance phase offset so multiple static NPCs in the same scene
 # don't all bob/sway in perfect unison.
@@ -43,6 +44,8 @@ func _ready() -> void:
 		else:
 			_mesh_root = packed.instantiate() as Node3D
 			add_child(_mesh_root)
+			_ground_lift = _compute_ground_lift(_mesh_root)
+			_mesh_root.position.y = _ground_lift
 	var talk := Interactable.new()
 	talk.verb = "Talk"
 	talk.display_name = display_name
@@ -50,11 +53,46 @@ func _ready() -> void:
 	talk.interacted.connect(_on_interacted)
 
 
+## Static Meshy exports aren't guaranteed to have their origin at their
+## feet the way rigged exports usually do (this villager's own mesh bounds
+## are roughly y ∈ [-0.95, 0.95] — origin at vertical center, not the sole),
+## so half the model renders sunk into the ground without this. Measures
+## the instanced mesh's actual lowest vertex and returns the y offset
+## needed to rest it exactly on the floor, instead of hardcoding a
+## per-asset magic-number offset.
+func _compute_ground_lift(mesh_root: Node3D) -> float:
+	var lowest_y := INF
+	var mesh_instances := mesh_root.find_children("*", "MeshInstance3D", true, false)
+	if mesh_root is MeshInstance3D:
+		mesh_instances.append(mesh_root)
+	for found in mesh_instances:
+		var mi := found as MeshInstance3D
+		var aabb := mi.get_aabb()
+		for corner_index in range(8):
+			var corner := (
+				aabb.position
+				+ Vector3(
+					aabb.size.x * float(corner_index & 1),
+					aabb.size.y * float((corner_index >> 1) & 1),
+					aabb.size.z * float((corner_index >> 2) & 1)
+				)
+			)
+			# mesh_root has no rotation/offset applied yet at this point in
+			# _ready(), so its local frame still matches this node's (the
+			# StaticNpc's) own frame — to_local() here gives the corner's
+			# position relative to StaticNpc's origin.
+			var in_local_space: Vector3 = to_local(mi.to_global(corner))
+			lowest_y = min(lowest_y, in_local_space.y)
+	if not is_finite(lowest_y):
+		return 0.0
+	return -lowest_y
+
+
 func _process(delta: float) -> void:
 	if _mesh_root == null:
 		return
 	_time += delta
-	_mesh_root.position.y = sin(_time * bob_speed + _phase) * bob_height
+	_mesh_root.position.y = _ground_lift + sin(_time * bob_speed + _phase) * bob_height
 	_mesh_root.rotation.y = deg_to_rad(sway_degrees) * sin(_time * sway_speed + _phase)
 
 

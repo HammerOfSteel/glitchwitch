@@ -69,6 +69,43 @@ func test_idle_motion_bobs_and_sways_the_mesh_without_bones() -> void:
 	)
 
 
+func test_mesh_feet_rest_on_the_ground_not_sunk_or_floating() -> void:
+	# The static Meshy export's own origin sits at its vertical center (its
+	# accessor bounds are roughly y ∈ [-0.95, 0.95]), not at its feet like a
+	# rigged export's root — without a computed ground lift, half the model
+	# renders sunk below the floor. StaticNpc must lift the mesh so its
+	# lowest vertex sits at y = 0 (npc's own origin), regardless of the
+	# source mesh's own pivot.
+	var npc := _build_npc()
+	add_child(npc)
+	await get_tree().process_frame
+
+	var mesh_root := npc.get_child(0) as Node3D
+	var lowest_y := INF
+	for found in npc.find_children("*", "MeshInstance3D", true, false):
+		var mi := found as MeshInstance3D
+		var aabb := mi.get_aabb()
+		for corner_index in range(8):
+			var corner := (
+				aabb.position
+				+ Vector3(
+					aabb.size.x * float(corner_index & 1),
+					aabb.size.y * float((corner_index >> 1) & 1),
+					aabb.size.z * float((corner_index >> 2) & 1)
+				)
+			)
+			var in_npc_space: Vector3 = npc.to_local(mi.to_global(corner))
+			lowest_y = min(lowest_y, in_npc_space.y)
+
+	var message := (
+		"expected the mesh's lowest point to rest at npc-local y=0 (got %.3f) — " % lowest_y
+		+ "half the model is sunk into the ground"
+	)
+	# One process_frame may already have applied a fraction of the idle bob
+	# (± bob_height) on top of the ground lift, so tolerance must cover it.
+	assert_float(lowest_y).override_failure_message(message).is_equal_approx(0.0, 0.05)
+
+
 func test_interacting_starts_dialogue() -> void:
 	var npc := _build_npc()
 	add_child(npc)
