@@ -75,7 +75,7 @@ For the **small-creature** archetype (The Kindlies), replace the T-pose clause w
 
 ## 1. Player
 
-### Wren
+### Wren — full outfit (final look)
 ```
 [style anchor], a young apprentice hearth-witch in her early twenties, slim build,
 average height, hair in a single loose braid, wearing a soft rounded felt witch hat
@@ -84,6 +84,59 @@ patched moss-green apron with pockets, sensible worn brown boots, a small satche
 her hip, warm friendly expression, slightly windswept and rumpled like she just
 arrived somewhere new
 ```
+
+### Wren — base body (clothing-agnostic, for modeling garments separately)
+
+Use this variant instead of the full-outfit one when you want a clean underlying
+body — proportions, skin tone, hair, face — with only *minimal, form-fitting* coverage,
+so the body silhouette is fully readable and you can sculpt/generate the dress, apron,
+hat, boots, etc. as separate pieces afterward and fit them onto this base (the same
+base-mesh-plus-clothing-layer split `tools/assetgen/blender/clothing.py` already uses
+for the paused in-house pipeline — same idea, just via Meshy instead of `bpy`).
+
+```
+[style anchor], a young woman's base body model in her early twenties, slim build,
+average height, neutral standing figure, wearing only a simple form-fitting
+sleeveless leotard and short leggings in plain light grey (minimal coverage, no
+loose fabric, no folds or draping — the goal is a clean body silhouette for
+garment-fitting reference, not a finished outfit), bare feet, hair in a single loose
+braid, neutral calm expression, no hat, no apron, no accessories, no props
+```
+
+**Then, generate clothing pieces as their own separate reference sheets** (each is its
+own small Image-to-3D job, fitted onto the base body afterward in your 3D tool):
+
+```
+[style anchor], a simple cream cottagecore work-dress on an invisible mannequin/
+ghost-body silhouette, knee-length, plain rounded neckline, short sleeves, worn
+slightly loose and rumpled, isolated garment only, no visible body/skin, no head,
+no legs, no background props
+```
+
+```
+[style anchor], a patched moss-green canvas work apron with two front pockets, worn
+straps, on an invisible mannequin/ghost-body silhouette, isolated garment only, no
+visible body/skin, no head, no background props
+```
+
+```
+[style anchor], a soft rounded felt witch hat (not tall or pointed — cozy, not
+villainous), warm brown felt, slightly worn, isolated object on a plain background,
+no head, no body
+```
+
+```
+[style anchor], a pair of sensible worn brown leather boots, ankle-height, slightly
+scuffed at the toe, isolated object pair on a plain background, no legs, no body
+```
+
+> Meshy AI's Image-to-3D can take the base-body images directly, and separately take
+> each garment's images through its own Image-to-3D pass (Meshy handles flat/mannequin
+> garment references reasonably well since this is a common e-commerce/fashion use
+> case for the tool). You then import the base body + each garment mesh into your DCC
+> tool (Blender) and fit/weight the garments to the base body's rig — this gives you
+> a reusable base body once, and swappable/remixable clothing pieces afterward, instead
+> of a single fused mesh you'd have to redo from scratch for outfit variants.
 
 ## 2. Named cast
 
