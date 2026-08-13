@@ -103,6 +103,109 @@ func test_interacting_starts_dialogue() -> void:
 	assert_bool(DialogueRunner.is_active()).is_true()
 
 
+func test_with_no_patrol_points_stays_in_place_playing_idle() -> void:
+	var npc := _build_npc()
+	add_child(npc)
+	await get_tree().process_frame
+	var before := npc.position
+	for i in range(10):
+		npc._process(0.1)
+	assert_vector(npc.position).is_equal_approx(before, Vector3(0.001, 0.001, 0.001))
+	var anim := npc.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
+	assert_str(anim.current_animation).is_equal("idle")
+
+
+func test_patrols_between_waypoints_using_walk_clip() -> void:
+	var npc := _build_npc()
+	npc.patrol_points = [Vector3(5, 0, 0), Vector3(10, 0, 0)]
+	npc.patrol_speed = 2.0
+	add_child(npc)
+	await get_tree().process_frame
+
+	var before := npc.position
+	for i in range(10):
+		npc._process(0.1)
+	var after := npc.position
+	(
+		assert_bool(before.is_equal_approx(after))
+		. override_failure_message("expected patrolling to move the NPC toward its next waypoint")
+		. is_false()
+	)
+	# Moving toward Vector3(5, 0, 0) from the origin — x should have increased.
+	assert_float(after.x).is_greater(before.x)
+
+	var anim := npc.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
+	assert_str(anim.current_animation).is_equal("walk")
+
+
+func test_stops_and_faces_interactor_when_interacted() -> void:
+	var npc := _build_npc()
+	npc.patrol_points = [Vector3(5, 0, 0), Vector3(10, 0, 0)]
+	npc.patrol_speed = 2.0
+	add_child(npc)
+	await get_tree().process_frame
+	for i in range(5):
+		npc._process(0.1)
+
+	var interactor := Node3D.new()
+	auto_free(interactor)
+	add_child(interactor)
+	interactor.global_position = npc.global_position + Vector3(3, 0, 0)
+
+	var talk := npc.find_children("*", "Interactable", true, false)[0] as Interactable
+	talk.interact(interactor)
+
+	var position_after_interact := npc.position
+	for i in range(5):
+		npc._process(0.1)
+	(
+		assert_vector(npc.position)
+		. override_failure_message("expected the NPC to stop patrolling while talking")
+		. is_equal_approx(position_after_interact, Vector3(0.001, 0.001, 0.001))
+	)
+
+	# Facing the interactor: -Z (forward) should point roughly toward it.
+	var to_interactor := (interactor.global_position - npc.global_position).normalized()
+	var forward := -npc.global_transform.basis.z
+	(
+		assert_float(forward.dot(to_interactor))
+		. override_failure_message("expected the NPC to rotate to face the interactor")
+		. is_greater(0.9)
+	)
+
+	var anim := npc.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
+	assert_str(anim.current_animation).is_equal("idle")
+
+
+func test_resumes_patrolling_after_dialogue_ends() -> void:
+	var npc := _build_npc()
+	npc.patrol_points = [Vector3(5, 0, 0), Vector3(10, 0, 0)]
+	npc.patrol_speed = 2.0
+	add_child(npc)
+	await get_tree().process_frame
+
+	var interactor := Node3D.new()
+	auto_free(interactor)
+	add_child(interactor)
+	interactor.global_position = npc.global_position + Vector3(3, 0, 0)
+
+	var talk := npc.find_children("*", "Interactable", true, false)[0] as Interactable
+	talk.interact(interactor)
+	assert_bool(DialogueRunner.is_active()).is_true()
+
+	DialogueRunner.ended.emit()
+	await get_tree().process_frame
+
+	var before := npc.position
+	for i in range(10):
+		npc._process(0.1)
+	(
+		assert_bool(before.is_equal_approx(npc.position))
+		. override_failure_message("expected the NPC to resume patrolling once dialogue ends")
+		. is_false()
+	)
+
+
 func after_test() -> void:
 	DialogueRunner.flags = {}
 	DialogueRunner._graph = null
