@@ -20,10 +20,10 @@ not a commitment to keep building it procedurally in-house.
 |---|---|---|---|---|---|---|---|---|
 | wren | character | witch (player) | sourced: Meshy AI dressed/rigged/animated body | idle/walk/run clips (no wave/stir yet — not in Meshy's stock anim library) | `tools/assetgen/meshy_import/import_wren_meshy.py` | P0 | Phase 1 player avatar | sourced (Meshy AI) |
 | sigrid-barm | character | villager (baker) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8 cast wave 1 | planned |
-| ansel-rowe | character | villager (postman) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8 cast wave 1; The Last Route | planned |
+| ansel-rowe | character | villager (postman) | sourced: Meshy AI rigged/animated body | idle/walk/run clips | `tools/assetgen/meshy_import/import_meshy_rigged_npc.py --name ansel_rowe`; `src/characters/npc/rigged_npc.gd` | P1 | Phase 8 cast wave 1; The Last Route; hedgerow lane background NPC | sourced (Meshy AI) |
 | maud-tressel | character | villager (elder) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8; Echoes in the Wallpaper | planned |
 | juniper-vale | character | villager (teen) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8; A Small Prayer | planned |
-| torben-ask | character | villager (forester) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8; No Fast-Forward | planned |
+| torben-ask | character | villager (forester) | sourced: Meshy AI rigged/animated body | idle/walk/run clips | `tools/assetgen/meshy_import/import_meshy_rigged_npc.py --name torben_ask`; `src/characters/npc/rigged_npc.gd` | P1 | Phase 8; No Fast-Forward; hedgerow lane background NPC | sourced (Meshy AI) |
 | greta-furrow | character | villager (farmer) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8; Meandering Migration | planned |
 | ines-jarvi | character | villager (shopkeep) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8 cast wave 2 | planned |
 | fenn-solder | character | villager (tinkerer) | procedural | villager rig/anim contract | src/characters/villager/ (VillagerFactory) | P1 | Phase 8 cast wave 2 | planned |
