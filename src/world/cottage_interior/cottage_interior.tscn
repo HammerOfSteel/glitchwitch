@@ -1,0 +1,44 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/world/cottage_interior/cottage_interior.gd" id="1_interior"]
+[ext_resource type="PackedScene" path="res://src/player/player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://src/world/zone_builder.gd" id="3_builder"]
+[ext_resource type="Resource" path="res://src/world/cottage_interior/cottage_interior.tres" id="4_zone"]
+
+[sub_resource type="Environment" id="env"]
+background_mode = 1
+background_color = Color(0.03, 0.03, 0.05, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.35, 0.32, 0.4, 1)
+ambient_light_energy = 0.25
+fog_enabled = false
+tonemap_mode = 3
+
+[sub_resource type="BoxShape3D" id="ground_col"]
+size = Vector3(6.2, 0.4, 6.2)
+
+[node name="CottageInterior" type="Node3D"]
+script = ExtResource("1_interior")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="HearthLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, -1.675)
+
+[node name="WindowLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.5, 1)
+
+[node name="GroundCollider" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 1)
+
+[node name="Shape" type="CollisionShape3D" parent="GroundCollider"]
+shape = SubResource("ground_col")
+
+[node name="ZoneBuilder" type="Node3D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("3_builder")
+zone = ExtResource("4_zone")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, -0.8)

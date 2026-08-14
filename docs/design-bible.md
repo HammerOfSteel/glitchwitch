@@ -128,13 +128,48 @@ verb for a gentle shimmer + icon badge; it must ship alongside each verb, not la
 
 ## Asset pipeline (decision record)
 
-- `tools/assetgen` is **pure Python (stdlib only)**: mesh kit → GLB writer, palette →
-  PNG writer. Deterministic under fixed seeds; byte-hash tested. Rationale: zero heavy
-  dependencies in CI/sandbox, total reproducibility, fast iteration. (Blender remains an
-  optional future tool for character accessory work; it is not a build dependency.)
-- Characters: **procedural segmented rigid-part rigs** with code-authored glTF node
-  animations (see Wren in `tools/assetgen/character.py`) — one art language, zero binaries,
-  clips loop via Godot's "-loop" import convention. CC0 skinned bases (KayKit / Quaternius)
-  remain a documented fallback via `tools/bootstrap.py` if a character ever needs skinning.
-- Nothing binary is committed. `assets/generated/` and `assets/thirdparty/` are build
-  outputs, ignored by git, rebuilt by `make assets` / bootstrap.
+- `tools/assetgen` is **pure Python (stdlib only)** for props, nature, and building
+  assets: mesh kit → GLB writer, palette → PNG writer. Deterministic under fixed
+  seeds; byte-hash tested. Rationale: zero heavy dependencies in CI/sandbox, total
+  reproducibility, fast iteration. **Unchanged by the pivot below** — this is still
+  where every prop/nature/building placeholder in the game comes from today.
+- **Character & environment art generation is sourced externally for now (pivot,
+  see `docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md`):** rather
+  than continuing to build and tune an in-house Blender procedural character
+  pipeline (or an equivalent in-house nature/building pipeline), the project owner
+  will generate final character art via Meshy AI (or a similar tool) and source
+  environment/building art from free/CC0 low-poly modular packs, outside this
+  repo's build. This keeps the small-in-house-pipeline burden off a project the
+  owner is running alongside several others.
+  - The **Blender-backed character-pipeline-v2** work
+    (`tools/assetgen/blender/`, `tools/assetgen/blender/base_humanoid.blend`) is
+    **paused, not deleted** — Tasks 1–11 are committed and test-covered; Task 12's
+    orchestrator has a known unresolved tri-budget failure. It may resume later if
+    in-house procedural generation becomes worthwhile again; until then no further
+    work lands on it.
+  - **Placeholder policy while external art is sourced:** the v1 procedural
+    character stack (`tools/assetgen/character_gen.py` et al., producing
+    `assets/generated/wren.glb` / `villager.glb`) and the v1 procedural
+    props/nature stack (`tools/assetgen/props.py`, producing
+    `assets/generated/{pine,fence,crate,jar,mug,ground_tile}.glb`, used in
+    `src/sandbox/glade.tscn`) both remain the working placeholders — nothing
+    about them changes or gets removed.
+  - **Wren specifically** additionally has a rigged/animated placeholder body,
+    `assets/thirdparty/wren_placeholder/wren_placeholder.glb`, built by
+    `tools/assetgen/placeholders/fetch_wren_placeholder.py` from a Seren
+    (Meshy AI) rigged+animated export the owner already produced for a separate
+    project. `WrenAvatar` (`src/player/avatar.gd`) loads this in place of the
+    procedural `wren.glb` when present, with `USE_PLACEHOLDER := true`, and falls
+    back to the procedural body if it hasn't been built locally. This is a
+    stand-in only — it ships its own baked material (palette dressing is skipped
+    for it) and has no wave/stir gesture clips (gestures no-op gracefully).
+- **CC0 skinned bases (KayKit / Quaternius)** remain documented as a fallback for
+  the base-mesh-only approach *if and when* in-house Blender character work
+  resumes — see
+  `docs/superpowers/specs/2026-08-08-character-pipeline-v2-blender-design.md`.
+- `assets/generated/` and `assets/thirdparty/` remain build outputs, ignored by
+  git, rebuilt by `make assets` / bootstrap / the placeholder fetch script above —
+  this is unchanged. The one exception is the committed `base_humanoid.blend`
+  *source* asset itself, which lives under `tools/assetgen/blender/` (alongside
+  the code that consumes it, paused as noted above), not under
+  `assets/generated/`.

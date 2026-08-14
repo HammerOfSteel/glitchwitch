@@ -49,6 +49,74 @@ func test_zoom_clamps() -> void:
 	assert_float(rig.zoom_target()).is_equal_approx(CameraRig.ZOOM_MAX, 0.001)
 
 
+func test_emits_glitch_detected_on_large_spring_length_jump() -> void:
+	var pair := _rig_under_parent()
+	var runner := scene_runner(pair[0])
+	var rig: CameraRig = pair[1]
+	await runner.simulate_frames(5)
+
+	var caught_kinds: Array = []
+	rig.glitch_detected.connect(
+		func(kind: String, _details: Dictionary) -> void: caught_kinds.append(kind)
+	)
+	# Simulate the kind of instantaneous shape-cast snap a SpringArm3D can
+	# produce right at a collider boundary — nothing normally moves the
+	# arm's length this far in a single frame (ZOOM_LERP smoothing caps it).
+	var arm := rig.get_node("%SpringArm") as SpringArm3D
+	arm.spring_length = CameraRig.ZOOM_MIN
+	rig._process(1.0 / 60.0)
+
+	(
+		assert_array(caught_kinds)
+		. override_failure_message("expected a spring_length_jump glitch to be reported")
+		. contains(["spring_length_jump"])
+	)
+
+
+func test_no_glitch_signal_during_normal_zoom_lerp() -> void:
+	var pair := _rig_under_parent()
+	var runner := scene_runner(pair[0])
+	var rig: CameraRig = pair[1]
+	await runner.simulate_frames(5)
+
+	var caught_kinds: Array = []
+	rig.glitch_detected.connect(
+		func(kind: String, _details: Dictionary) -> void: caught_kinds.append(kind)
+	)
+	rig.zoom_by(-CameraRig.ZOOM_STEP)
+	for _i in range(10):
+		rig._process(1.0 / 60.0)
+
+	(
+		assert_array(caught_kinds)
+		. override_failure_message("expected no glitch during a normal smoothed zoom step")
+		. is_empty()
+	)
+
+
+func test_emits_glitch_detected_on_large_anchor_jump() -> void:
+	var pair := _rig_under_parent()
+	var parent: Node3D = pair[0]
+	var runner := scene_runner(parent)
+	var rig: CameraRig = pair[1]
+	await runner.simulate_frames(5)
+
+	var caught_kinds: Array = []
+	rig.glitch_detected.connect(
+		func(kind: String, _details: Dictionary) -> void: caught_kinds.append(kind)
+	)
+	# A teleport (not a walk) — much further than FOLLOW_LERP could close
+	# in one frame — mimics the rig "popping" rather than easing.
+	parent.global_position = Vector3(50, 0, 50)
+	rig._process(1.0 / 60.0)
+
+	(
+		assert_array(caught_kinds)
+		. override_failure_message("expected a position_jump glitch to be reported")
+		. contains(["position_jump"])
+	)
+
+
 func test_rig_follows_moved_parent() -> void:
 	var pair := _rig_under_parent()
 	var runner := scene_runner(pair[0])

@@ -14,3 +14,7 @@ func on_focus_changed(interactable: Interactable) -> void:
 		return
 	text = "[E]  %s" % interactable.prompt_text()
 	visible = true
+
+
+func force_hide() -> void:
+	visible = false

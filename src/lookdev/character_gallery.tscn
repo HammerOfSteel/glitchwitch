@@ -1,0 +1,58 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/lookdev/character_gallery.gd" id="1_gallery"]
+[ext_resource type="PackedScene" path="res://assets/generated/ground_tile.glb" id="2_ground"]
+[ext_resource type="PackedScene" path="res://assets/generated/wren.glb" id="3_wren"]
+[ext_resource type="PackedScene" path="res://assets/generated/villager.glb" id="4_villager"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+sky_top_color = Color(0.53, 0.72, 0.83, 1)
+sky_horizon_color = Color(0.87, 0.85, 0.76, 1)
+ground_bottom_color = Color(0.42, 0.49, 0.4, 1)
+ground_horizon_color = Color(0.85, 0.83, 0.74, 1)
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+ambient_light_color = Color(0.92, 0.9, 0.85, 1)
+ambient_light_energy = 0.6
+tonemap_mode = 3
+fog_enabled = true
+fog_light_color = Color(0.85, 0.85, 0.78, 1)
+fog_density = 0.004
+
+[node name="CharacterGallery" type="Node3D"]
+script = ExtResource("1_gallery")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+
+[node name="Fill" type="DirectionalLight3D" parent="."]
+
+[node name="Camera" type="Camera3D" parent="."]
+
+[node name="GroundA" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0, 0)
+
+[node name="Tile" parent="GroundA" instance=ExtResource("2_ground")]
+
+[node name="GroundB" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0, 0)
+
+[node name="Tile" parent="GroundB" instance=ExtResource("2_ground")]
+
+[node name="WrenStand" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0, 0)
+
+[node name="Wren" parent="WrenStand" instance=ExtResource("3_wren")]
+
+[node name="VillagerStand" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0, 0)
+
+[node name="Villager" parent="VillagerStand" instance=ExtResource("4_villager")]

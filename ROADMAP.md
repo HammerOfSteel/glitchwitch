@@ -1,6 +1,6 @@
 # Glitch Witch — Roadmap
 
-Twelve phases, 0 → 11. Every phase: its own branch, per-task pushes, per-subtask commits,
+Thirteen phases, 0 → 12. Every phase: its own branch, per-task pushes, per-subtask commits,
 tests with every task, full green suite + playable artifact at the gate, then PR to `main`
 and a tag. Current status lives in the table at the bottom.
 
@@ -34,75 +34,156 @@ Goal: a repo where every later phase is cheap — pipeline, tests, CI, and the l
 - T1.4 Interaction system (focus, prompts, priority)
 - T1.5 Witch avatar: procedural segmented character with code-authored clips
 
-## Phase 2 — World & Time (`phase/02-world`)
-- T2.1 Environment generators v1 (trees, rocks, flora, fences, cottage kit, paths)
-- T2.2 Zone tooling (placement, MultiMesh scatter, zone schema)
-- T2.3 Cottage interior + garden assembled
-- T2.4 Village + Hedgerow Lanes first dressing pass
-- T2.5 Time-of-day + weather-lite + clock service (Patch Day weekday math, drift hooks)
+## Phase 2 — Character Foundation (`phase/02-character-foundation`)
+> **⏸️ Paused (pivot 2026-08-09):** in-house procedural/Blender character
+> generation is on hold — final character art is now sourced externally
+> (Meshy AI or similar), owner-driven, as time allows. Placeholders (v1
+> procedural Wren/villager + a Seren-derived rigged/animated Wren stand-in)
+> keep later phases unblocked in the meantime. Full rationale and placeholder
+> details: [`docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md`](docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md).
+> Original goal, kept for reference / possible future resumption:
 
-## Phase 3 — Narrative Spine (`phase/03-spine`)
-- T3.1 Dialogue engine (JSON graphs, conditions, portraits, animalese voices)
-- T3.2 Quest engine (schema, QuestDirector, reachability lint)
-- T3.3 Magpie Log journal UI
-- T3.4 Versioned saves + migration framework ("meandering migrations")
-- T3.5 Settings + accessibility base (rebind, text scale, reduce-glitch, palettes)
-- T3.6 Pilot NPC (the baker) proving dialogue → quest → reward end-to-end
+Goal: turn Wren from a hard-coded one-off into a deterministic, data-driven procedural
+character pipeline capable of producing the full village cast later, without ever
+touching a rigged/skinned mesh. Godot-native rebuild, informed by (not ported from)
+the procedural character system in `HammerOfSteel/tomes_towers_and_transmutation`
+(branch `cline_work-06_overworld_water_polish`). Full design in
+[`docs/superpowers/specs/2026-08-08-character-procedural-pipeline-design.md`](docs/superpowers/specs/2026-08-08-character-procedural-pipeline-design.md).
 
-## Phase 4 — Witchcraft I (`phase/04-witchcraft-1`)
-- T4.1 Pantry inventory (labeled jars, shelf UI, bloom-filter door sprite)
-- T4.2 Gathering tools (broom-sweep, picker, net, flask; respawn clocks)
-- T4.3 **Kettle Logic** brewing minigame + recipes + steam-rune hints
-- T4.4 Blessing & naming (named objects gain traits)
-- T4.5 First three potions with world effects
+- T2.1 Character spec schema + part library registry (`character_spec.py`,
+  `part_registry.py`) — archetypes, seeded part-slot resolution, compatibility rules.
+  ✅ done (v1 procedural, still the live placeholder source)
+- T2.2 Rig contract + animation contract (`rig_contract.py`, `animation_contract.py`) —
+  canonical slot → node mapping, mandatory baseline clip set, per-archetype geometry.
+  ✅ done (v1)
+- T2.3 Generator/assembler + validator (`character_gen.py`, `character_validate.py`) —
+  spec-to-GLB pipeline, contract-violation errors, byte-determinism guarantee.
+  ✅ done (v1)
+- T2.4 Wren migration — her exact current look/rig/animations reproduced byte-identical
+  through the new pipeline; `build.py` updated to call the generator. ✅ done (v1);
+  Blender-backed v2 rebuild paused, see pivot note above
+- T2.5 Second archetype proof (e.g. `villager`) generated end-to-end + Asset Inventory
+  Matrix (`docs/asset-inventory.md`) populated with every known character/nature/
+  building asset need. ✅ done (v1 proof); matrix now annotated with the sourcing
+  pivot. *Tests: rig/clip/budget validation, determinism, contract version metadata
+  in manifest.*
 
-## Phase 5 — Witchcraft II (`phase/05-witchcraft-2`)
-- T5.1 **Chalk sigils** (stroke glyphs, if/then ward rules, lintel placement)
-- T5.2 Glitch anomaly framework (types, spawn director, magpie telemetry)
-- T5.3 **Mending loop** (Witch Sight diagnosis → remedy → resolution)
-- T5.4 **Leaven** the sourdough companion (care sim, proto-Pattern voice)
-- T5.5 Breadcrumb divination (daily fortunes seed RNG drift quests)
+## Phase 3 — Nature & Building Foundation (`phase/03-nature-building-foundation`)
+> **⏸️ Paused (pivot 2026-08-09):** deferred in favor of sourcing free/CC0
+> low-poly modular packs for nature/building art, owner-driven, as time allows —
+> same rationale as Phase 2's pause. The existing v1 procedural prop set
+> (`tools/assetgen/props.py`: pine, fence, crate, jar, mug, ground tile) remains
+> the live environment placeholder (see `src/sandbox/glade.tscn`) and needs no
+> restoration. Extend it with cheap new procedural props, or drop in CC0 pack
+> assets, per-asset, whichever is faster — no new pipeline commitment. See
+> [`docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md`](docs/superpowers/specs/2026-08-09-external-asset-pivot-design.md).
 
-## Phase 6 — Village & Cast (`phase/06-village-cast`)
-- T6.1 NPC framework (schedules, friendship, gifts, memory of kindness)
-- T6.2 Cast assets (canonical rig, 14 villagers + kids + cats + magpies + sprites)
-- T6.3 Cast wave 1 (7 NPCs, schedules, intro dialogue, one side quest each)
-- T6.4 Cast wave 2 (rest of cast + glitchfauna + journal entries)
-- T6.5 Village life (favor-barter ledger, noticeboard, radio broadcasts)
+Original goal, kept for reference / possible future resumption: apply the same
+procedural-foundation discipline to environment assets — trees, rocks, flora,
+fences, and cottage/building kit pieces — informed by the referenced project's
+procedural approach, adapted to Godot's mesh/scene conventions.
 
-## Phase 7 — Act I Complete + Polish Gate 1 (`phase/07-act1`)
-- T7.1 Act I main chain (8 quests: arrival → the hearth speaks)
-- T7.2 Act I side content (10 side + 3 hidden)
-- T7.3 Tutorialization (The Runbook as diegetic help)
-- T7.4 Audio pass 1 (bus tree, stem-ready AudioDirector manifest, SFX, animalese tuning)
-- T7.5 Polish gate: perf, feel, VFX v2, dev builds all platforms → **Act I playable**
+## Phase 4 — World & Time (`phase/04-world`)
+- T4.1 Environment placeholders ✅ done — cottage wall/corner/roof kit, planter,
+  well, grass tuft, flower, and rock added to `tools/assetgen/props.py`
+  (see `docs/superpowers/plans/2026-08-10-zone-tooling-environment-placeholders.md`)
+- T4.2 Zone tooling (placement, MultiMesh scatter, zone schema) ✅ done —
+  `Zone`/`PropPlacement`/`ScatterRegion`/`ZoneBuilder` in `src/world/`, proven
+  via the `cottage_garden` zone (`src/world/cottage_garden/`), budget-tested
+  against the 150k tri / 120 draw call zone ceiling
+- T4.3 Cottage interior + garden assembled ✅ done — `cottage_interior`
+  zone (`src/world/cottage_interior/`): hearth-lit main room + open bed
+  alcove, 8 new placeholder props (interior wall/floor kit, hearth, table,
+  chair, shelf, rug, bed), budget-tested against the same 150k tri / 120
+  draw call ceiling as `cottage_garden`
+  (see `docs/superpowers/plans/2026-08-11-cottage-interior.md`)
+- T4.4 Village + Hedgerow Lanes first dressing pass ✅ done —
+  `hedgerow_lane` zone (`src/world/hedgerow_lane/`): a straight 10m×2m
+  lane flanked by hedge rows, one stone-stile crossing point, and one
+  signpost, 4 new placeholder props (hedge, stone stile, lane path,
+  signpost), budget-tested against the same 150k tri / 120 draw call
+  ceiling as `cottage_garden`/`cottage_interior`
+  (see `docs/superpowers/plans/2026-08-12-hedgerow-lane.md`)
+- T4.5 Time-of-day + clock service ✅ done — `GameClock` autoload
+  (real-time-synced hour/weekday/date, Patch Day weekday math verified),
+  `TimeOfDayCurve` pure lighting-interpolation helper, `TimeOfDayRig` node
+  driving `Sun`/`Fill` lighting from the clock, wired into `cottage_garden`
+  and `hedgerow_lane` (see
+  `docs/superpowers/specs/2026-08-12-clock-time-of-day-design.md` and
+  `docs/superpowers/plans/2026-08-12-clock-time-of-day.md`); weather-lite
+  and Patch Day drift hooks are deferred as separate follow-up work per the
+  spec's explicit scope split
 
-## Phase 8 — Act II: Seams & Glitches (`phase/08-act2`)
-- T8.1 Escalation systems (anomaly director, The Seams pocket zones, echo playback)
-- T8.2 Moss Forest + Fen zones (slow-time fields)
-- T8.3 Stark chains A: The Last Route · Echoes in the Wallpaper
-- T8.4 Stark chains B: A Small Prayer · No Fast-Forward · Meandering Migration
-- T8.5 Act II main chain (10 quests) → **Act II playable**
+## Phase 5 — Narrative Spine (`phase/05-spine`)
+- T5.1 Dialogue engine ✅ done — `DialogueGraph` (JSON graph loader/
+  validator with condition-gated nodes and choices), `DialogueRunner`
+  autoload (state machine driving `line_shown`/`choices_shown`/`ended`
+  signals; asymmetric condition resolution — a false condition skips its
+  node's own line entirely via immediate `else` recursion, a true
+  condition shows its own line first and only advances via explicit
+  `advance()`), `Animalese` procedural voice-blip synth (per-NPC seeded
+  pitch), `DialogueBox` UI (portrait, typewriter reveal, numbered choice
+  buttons) wired reactively into `Player`/`InteractPrompt`, and a demo
+  villager in `cottage_garden` proving the full loop end-to-end
+  (see `docs/superpowers/plans/2026-08-12-dialogue-engine.md`)
+- T5.2 Quest engine (schema, QuestDirector, reachability lint)
+- T5.3 Magpie Log journal UI
+- T5.4 Versioned saves + migration framework ("meandering migrations")
+- T5.5 Settings + accessibility base (rebind, text scale, reduce-glitch, palettes)
+- T5.6 Pilot NPC (the baker) proving dialogue → quest → reward end-to-end
 
-## Phase 9 — Act III: Consent to the Pattern (`phase/09-act3`)
-- T9.1 Kindness ledger surfacing (checksum categories, Runbook ledger page)
-- T9.2 Act III main chain (6 quests → the Night of Static)
-- T9.3 **Checksum of the Heart** finale ceremony + ending variants
-- T9.4 Credits, outro slot, epilogue world states → **story complete**
+## Phase 6 — Witchcraft I (`phase/06-witchcraft-1`)
+- T6.1 Pantry inventory (labeled jars, shelf UI, bloom-filter door sprite)
+- T6.2 Gathering tools (broom-sweep, picker, net, flask; respawn clocks)
+- T6.3 **Kettle Logic** brewing minigame + recipes + steam-rune hints
+- T6.4 Blessing & naming (named objects gain traits)
+- T6.5 First three potions with world effects
 
-## Phase 10 — Postgame & Depth (`phase/10-postgame`)
-- T10.1 Patch Day weekly ritual (changelog on the pantry door)
-- T10.2 Drift quests at scale (20+ templates, rarity, pity timers)
-- T10.3 Full seasons (visuals, tables, 4 festivals)
-- T10.4 NG+ echoes + hidden meta-quests (the magpies' true cache)
-- T10.5 Collections & completion rewards
+## Phase 7 — Witchcraft II (`phase/07-witchcraft-2`)
+- T7.1 **Chalk sigils** (stroke glyphs, if/then ward rules, lintel placement)
+- T7.2 Glitch anomaly framework (types, spawn director, magpie telemetry)
+- T7.3 **Mending loop** (Witch Sight diagnosis → remedy → resolution)
+- T7.4 **Leaven** the sourdough companion (care sim, proto-Pattern voice)
+- T7.5 Breadcrumb divination (daily fortunes seed RNG drift quests)
 
-## Phase 11 — Release (`phase/11-release`)
-- T11.1 Performance & memory (pooling, LOD, web tuning)
-- T11.2 Accessibility & UX audit (photosensitivity, captions, assists)
-- T11.3 Localization scaffold + English proofread
-- T11.4 Stability (soak runs, save fuzzing, bug bash)
-- T11.5 Release v1.0.0 + post-1.0 Patch Day roadmap
+## Phase 8 — Village & Cast (`phase/08-village-cast`)
+- T8.1 NPC framework (schedules, friendship, gifts, memory of kindness)
+- T8.2 Cast assets (canonical rig, 14 villagers + kids + cats + magpies + sprites)
+- T8.3 Cast wave 1 (7 NPCs, schedules, intro dialogue, one side quest each)
+- T8.4 Cast wave 2 (rest of cast + glitchfauna + journal entries)
+- T8.5 Village life (favor-barter ledger, noticeboard, radio broadcasts)
+
+## Phase 9 — Act I Complete + Polish Gate 1 (`phase/09-act1`)
+- T9.1 Act I main chain (8 quests: arrival → the hearth speaks)
+- T9.2 Act I side content (10 side + 3 hidden)
+- T9.3 Tutorialization (The Runbook as diegetic help)
+- T9.4 Audio pass 1 (bus tree, stem-ready AudioDirector manifest, SFX, animalese tuning)
+- T9.5 Polish gate: perf, feel, VFX v2, dev builds all platforms → **Act I playable**
+
+## Phase 10 — Act II: Seams & Glitches (`phase/10-act2`)
+- T10.1 Escalation systems (anomaly director, The Seams pocket zones, echo playback)
+- T10.2 Moss Forest + Fen zones (slow-time fields)
+- T10.3 Stark chains A: The Last Route · Echoes in the Wallpaper
+- T10.4 Stark chains B: A Small Prayer · No Fast-Forward · Meandering Migration
+- T10.5 Act II main chain (10 quests) → **Act II playable**
+
+## Phase 11 — Act III: Consent to the Pattern (`phase/11-act3`)
+- T11.1 Kindness ledger surfacing (checksum categories, Runbook ledger page)
+- T11.2 Act III main chain (6 quests → the Night of Static)
+- T11.3 **Checksum of the Heart** finale ceremony + ending variants
+- T11.4 Credits, outro slot, epilogue world states → **story complete**
+
+## Phase 12 — Postgame, Depth & Release (`phase/12-postgame-release`)
+- T12.1 Patch Day weekly ritual (changelog on the pantry door)
+- T12.2 Drift quests at scale (20+ templates, rarity, pity timers)
+- T12.3 Full seasons (visuals, tables, 4 festivals)
+- T12.4 NG+ echoes + hidden meta-quests (the magpies' true cache)
+- T12.5 Collections & completion rewards
+- T12.6 Performance & memory (pooling, LOD, web tuning)
+- T12.7 Accessibility & UX audit (photosensitivity, captions, assists)
+- T12.8 Localization scaffold + English proofread
+- T12.9 Stability (soak runs, save fuzzing, bug bash)
+- T12.10 Release v1.0.0 + post-1.0 Patch Day roadmap
 
 ---
 
@@ -112,8 +193,10 @@ Goal: a repo where every later phase is cheap — pipeline, tests, CI, and the l
 |---|---|---|
 | 0 — Foundation | `phase/00-foundation` | ✅ complete |
 | 1 — Player & Camera | `phase/01-player-camera` | ✅ complete |
-| 2 — World & Time | `phase/02-world` | ⏭️ next up |
-| 3–11 | — | 📋 planned |
+| 2 — Character Foundation | `phase/02-character-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
+| 3 — Nature & Building Foundation | `phase/03-nature-building-foundation` | ⏸️ paused (external art pivot 2026-08-09) — v1 placeholders live |
+| 4 — World & Time | `phase/04-world` | 🚧 in progress — T4.1–T4.5 clock/time-of-day done, weather-lite + drift hooks deferred (proceeds on placeholders, see pivot spec) |
+| 5–12 | — | 📋 planned |
 
 At each gate: suites fully green, playable artifact, docs updated.
 Gate records — Phase 0: 36 pytest + 11 gdUnit. Phase 1: 44 pytest + 57 gdUnit,
@@ -129,10 +212,10 @@ Linux export boots into the sandbox glade.
   at each future gate).
 - [ ] Owner: license decision — see [LICENSES.md](LICENSES.md).
 - [ ] Owner: story-bible name vetoes (village, cast, entities).
-- [ ] Owner: adapted album stems, any time — the manifest slot opens in Phase 7.
+- [ ] Owner: adapted album stems, any time — the manifest slot opens in Phase 9.
 
 ## Deferred / floating
 
 - **Music integration:** the album's adapted stems are produced by the project owner and
-  drop into `content/music/manifest.json` any time after Phase 7 — the AudioDirector is
+  drop into `content/music/manifest.json` any time after Phase 9 — the AudioDirector is
   built stem-ready with generated ambience beds as placeholders.

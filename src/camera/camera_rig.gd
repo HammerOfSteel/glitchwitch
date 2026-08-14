@@ -8,6 +8,11 @@ extends Node3D
 
 signal mode_changed(mode: Mode)
 signal sight_changed(enabled: bool)
+## Emitted when the rig position or spring arm length "pops" instead of
+## easing — evidence for tracking down the reported cottage-scene camera
+## glitch. `details` carries kind-specific before/after values so a real
+## reproduction's log has hard numbers instead of a guess.
+signal glitch_detected(kind: String, details: Dictionary)
 
 enum Mode { THIRD, FIRST }
 
@@ -30,6 +35,14 @@ const ANCHOR_HEIGHT := 1.2
 const FRAME_BIAS_SPEED := 0.5
 const FRAME_BIAS_IDLE_DELAY := 0.6
 
+## Above these single-frame deltas we're not smoothly easing anymore — the
+## rig or its arm has "popped." Investigating a reported cottage-scene
+## camera glitch: instrumented first (per systematic-debugging) rather than
+## guessed at, so a reproduction's logs/signal payloads carry real evidence
+## (position/length before+after, mode, timestamp) instead of a hunch.
+const GLITCH_POSITION_JUMP_THRESHOLD := 0.6
+const GLITCH_SPRING_JUMP_THRESHOLD := 1.0
+
 @export var frame_bias_enabled := false
 
 var _yaw := 0.0
@@ -40,6 +53,8 @@ var _bias_target: Node3D = null
 var _mode := Mode.THIRD
 var _sight := false
 var _transition_tween: Tween = null
+var _prev_global_position := Vector3.INF
+var _prev_spring_length := -1.0
 
 @onready var _pitch_pivot: Node3D = %PitchPivot
 @onready var _spring_arm: SpringArm3D = %SpringArm
@@ -72,6 +87,7 @@ func _process(delta: float) -> void:
 	_spring_arm.spring_length = lerpf(
 		_spring_arm.spring_length, _arm_target(), 1.0 - exp(-ZOOM_LERP * delta)
 	)
+	_check_for_glitches(delta)
 
 
 func yaw() -> float:
@@ -213,3 +229,44 @@ func _apply_frame_bias(delta: float) -> void:
 
 func _now() -> float:
 	return float(Time.get_ticks_msec()) / 1000.0
+
+
+## Flags single-frame pops in rig position or spring arm length — either can
+## produce the "for half a second" visual glitch the owner reported in the
+## cottage scene. Evidence-gathering only: this does not attempt a fix, it
+## surfaces exact numbers (via signal + log) for whichever cause turns out
+## to be real once reproduced.
+func _check_for_glitches(delta: float) -> void:
+	if _prev_global_position != Vector3.INF:
+		var position_jump := global_position.distance_to(_prev_global_position)
+		if position_jump > GLITCH_POSITION_JUMP_THRESHOLD:
+			_report_glitch(
+				"position_jump",
+				{
+					"jump": position_jump,
+					"delta": delta,
+					"from": _prev_global_position,
+					"to": global_position,
+					"mode": _mode,
+				}
+			)
+	if _prev_spring_length >= 0.0:
+		var spring_jump := absf(_spring_arm.spring_length - _prev_spring_length)
+		if spring_jump > GLITCH_SPRING_JUMP_THRESHOLD:
+			_report_glitch(
+				"spring_length_jump",
+				{
+					"jump": spring_jump,
+					"delta": delta,
+					"from": _prev_spring_length,
+					"to": _spring_arm.spring_length,
+					"mode": _mode,
+				}
+			)
+	_prev_global_position = global_position
+	_prev_spring_length = _spring_arm.spring_length
+
+
+func _report_glitch(kind: String, details: Dictionary) -> void:
+	push_warning("CameraRig glitch_detected: %s %s" % [kind, details])
+	glitch_detected.emit(kind, details)

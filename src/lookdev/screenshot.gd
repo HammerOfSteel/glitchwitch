@@ -7,7 +7,10 @@ extends Node
 
 const CAPTURES := {
 	"lookdev_diorama": "res://src/lookdev/diorama.tscn",
+	"character_gallery": "res://src/lookdev/character_gallery.tscn",
 	"sandbox_glade": "res://src/sandbox/glade.tscn",
+	"cottage_interior": "res://src/world/cottage_interior/cottage_interior.tscn",
+	"cottage_garden": "res://src/world/cottage_garden/cottage_garden.tscn",
 }
 const SETTLE_FRAMES := 10
 

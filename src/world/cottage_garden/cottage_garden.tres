@@ -1,0 +1,276 @@
+[gd_resource type="Resource" script_class="Zone" format=4]
+
+[ext_resource type="Script" path="res://src/world/zone.gd" id="1_zone"]
+[ext_resource type="Script" path="res://src/world/prop_placement.gd" id="2_placement"]
+[ext_resource type="Script" path="res://src/world/scatter_region.gd" id="3_scatter"]
+[ext_resource type="PackedScene" path="res://assets/generated/cottage_facade.glb" id="4_facade"]
+[ext_resource type="PackedScene" path="res://assets/generated/planter.glb" id="7_planter"]
+[ext_resource type="PackedScene" path="res://assets/generated/well.glb" id="8_well"]
+[ext_resource type="PackedScene" path="res://assets/generated/fence.glb" id="9_fence"]
+[ext_resource type="PackedScene" path="res://assets/generated/ground_tile.glb" id="10_ground"]
+[ext_resource type="ArrayMesh" path="res://assets/generated/grass_tuft_mesh.tres" id="11_grass_mesh"]
+[ext_resource type="ArrayMesh" path="res://assets/generated/flower_mesh.tres" id="12_flower_mesh"]
+[ext_resource type="PackedScene" path="res://assets/generated/lane_path.glb" id="13_path"]
+[ext_resource type="PackedScene" path="res://assets/generated/crate.glb" id="14_crate"]
+[ext_resource type="PackedScene" path="res://assets/generated/rock.glb" id="15_rock"]
+
+[sub_resource type="Resource" id="Placement_facade"]
+script = ExtResource("2_placement")
+scene = ExtResource("4_facade")
+position = Vector3(0, 0, -4.3)
+rotation_degrees = Vector3(0, 180, 0)
+solid = true
+
+[sub_resource type="Resource" id="Placement_planter_1"]
+script = ExtResource("2_placement")
+scene = ExtResource("7_planter")
+position = Vector3(-5, 0, 3)
+
+[sub_resource type="Resource" id="Placement_planter_2"]
+script = ExtResource("2_placement")
+scene = ExtResource("7_planter")
+position = Vector3(-5, 0, 1)
+
+[sub_resource type="Resource" id="Placement_well"]
+script = ExtResource("2_placement")
+scene = ExtResource("8_well")
+position = Vector3(5, 0, 3)
+
+[sub_resource type="Resource" id="Placement_crate"]
+script = ExtResource("2_placement")
+scene = ExtResource("14_crate")
+position = Vector3(5, 0, 1)
+
+[sub_resource type="Resource" id="Placement_rock_1"]
+script = ExtResource("2_placement")
+scene = ExtResource("15_rock")
+position = Vector3(4, 0, -3)
+
+[sub_resource type="Resource" id="Placement_rock_2"]
+script = ExtResource("2_placement")
+scene = ExtResource("15_rock")
+position = Vector3(-4, 0, -4)
+
+[sub_resource type="Resource" id="Placement_fence_1"]
+script = ExtResource("2_placement")
+scene = ExtResource("9_fence")
+position = Vector3(-5.9, 0, -2)
+rotation_degrees = Vector3(0, 90, 0)
+solid = true
+
+[sub_resource type="Resource" id="Placement_fence_2"]
+script = ExtResource("2_placement")
+scene = ExtResource("9_fence")
+position = Vector3(-5.9, 0, -1)
+rotation_degrees = Vector3(0, 90, 0)
+solid = true
+
+[sub_resource type="Resource" id="Placement_fence_3"]
+script = ExtResource("2_placement")
+scene = ExtResource("9_fence")
+position = Vector3(-5.9, 0, 1)
+rotation_degrees = Vector3(0, 90, 0)
+solid = true
+
+[sub_resource type="Resource" id="Placement_fence_4"]
+script = ExtResource("2_placement")
+scene = ExtResource("9_fence")
+position = Vector3(-5.9, 0, 2)
+rotation_degrees = Vector3(0, 90, 0)
+solid = true
+
+[sub_resource type="Resource" id="Placement_path_1"]
+script = ExtResource("2_placement")
+scene = ExtResource("13_path")
+position = Vector3(-1, 0, -1)
+
+[sub_resource type="Resource" id="Placement_path_2"]
+script = ExtResource("2_placement")
+scene = ExtResource("13_path")
+position = Vector3(-1, 0, 1)
+
+[sub_resource type="Resource" id="Placement_path_3"]
+script = ExtResource("2_placement")
+scene = ExtResource("13_path")
+position = Vector3(1, 0, -1)
+
+[sub_resource type="Resource" id="Placement_path_4"]
+script = ExtResource("2_placement")
+scene = ExtResource("13_path")
+position = Vector3(1, 0, 1)
+
+[sub_resource type="Resource" id="Placement_ground_1"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-5, 0, -5)
+
+[sub_resource type="Resource" id="Placement_ground_2"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-5, 0, -3)
+
+[sub_resource type="Resource" id="Placement_ground_3"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-5, 0, -1)
+
+[sub_resource type="Resource" id="Placement_ground_4"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-5, 0, 1)
+
+[sub_resource type="Resource" id="Placement_ground_5"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-5, 0, 3)
+
+[sub_resource type="Resource" id="Placement_ground_6"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-5, 0, 5)
+
+[sub_resource type="Resource" id="Placement_ground_7"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, -5)
+
+[sub_resource type="Resource" id="Placement_ground_8"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, -3)
+
+[sub_resource type="Resource" id="Placement_ground_9"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, -1)
+
+[sub_resource type="Resource" id="Placement_ground_10"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, 1)
+
+[sub_resource type="Resource" id="Placement_ground_11"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, 3)
+
+[sub_resource type="Resource" id="Placement_ground_12"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-3, 0, 5)
+
+[sub_resource type="Resource" id="Placement_ground_13"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-1, 0, -5)
+
+[sub_resource type="Resource" id="Placement_ground_14"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-1, 0, -3)
+
+[sub_resource type="Resource" id="Placement_ground_15"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-1, 0, 3)
+
+[sub_resource type="Resource" id="Placement_ground_16"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(-1, 0, 5)
+
+[sub_resource type="Resource" id="Placement_ground_17"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(1, 0, -5)
+
+[sub_resource type="Resource" id="Placement_ground_18"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(1, 0, -3)
+
+[sub_resource type="Resource" id="Placement_ground_19"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(1, 0, 3)
+
+[sub_resource type="Resource" id="Placement_ground_20"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(1, 0, 5)
+
+[sub_resource type="Resource" id="Placement_ground_21"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, -5)
+
+[sub_resource type="Resource" id="Placement_ground_22"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, -3)
+
+[sub_resource type="Resource" id="Placement_ground_23"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, -1)
+
+[sub_resource type="Resource" id="Placement_ground_24"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, 1)
+
+[sub_resource type="Resource" id="Placement_ground_25"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, 3)
+
+[sub_resource type="Resource" id="Placement_ground_26"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(3, 0, 5)
+
+[sub_resource type="Resource" id="Placement_ground_27"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(5, 0, -5)
+
+[sub_resource type="Resource" id="Placement_ground_28"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(5, 0, -3)
+
+[sub_resource type="Resource" id="Placement_ground_29"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(5, 0, -1)
+
+[sub_resource type="Resource" id="Placement_ground_30"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(5, 0, 1)
+
+[sub_resource type="Resource" id="Placement_ground_31"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(5, 0, 3)
+
+[sub_resource type="Resource" id="Placement_ground_32"]
+script = ExtResource("2_placement")
+scene = ExtResource("10_ground")
+position = Vector3(5, 0, 5)
+
+[sub_resource type="Resource" id="Resource_mnyy3"]
+script = ExtResource("3_scatter")
+variants = Array[Mesh]([ExtResource("11_grass_mesh"), ExtResource("12_flower_mesh")])
+shape = 1
+size = Vector2(11, 11)
+density = 3.0
+scale_min = 0.85
+scale_max = 1.15
+seed = 1
+
+[resource]
+script = ExtResource("1_zone")
+ground_size = Vector2(12, 12)
+placements = Array[ExtResource("2_placement")]([SubResource("Placement_facade"), SubResource("Placement_planter_1"), SubResource("Placement_planter_2"), SubResource("Placement_well"), SubResource("Placement_crate"), SubResource("Placement_rock_1"), SubResource("Placement_rock_2"), SubResource("Placement_fence_1"), SubResource("Placement_fence_2"), SubResource("Placement_fence_3"), SubResource("Placement_fence_4"), SubResource("Placement_path_1"), SubResource("Placement_path_2"), SubResource("Placement_path_3"), SubResource("Placement_path_4"), SubResource("Placement_ground_1"), SubResource("Placement_ground_2"), SubResource("Placement_ground_3"), SubResource("Placement_ground_4"), SubResource("Placement_ground_5"), SubResource("Placement_ground_6"), SubResource("Placement_ground_7"), SubResource("Placement_ground_8"), SubResource("Placement_ground_9"), SubResource("Placement_ground_10"), SubResource("Placement_ground_11"), SubResource("Placement_ground_12"), SubResource("Placement_ground_13"), SubResource("Placement_ground_14"), SubResource("Placement_ground_15"), SubResource("Placement_ground_16"), SubResource("Placement_ground_17"), SubResource("Placement_ground_18"), SubResource("Placement_ground_19"), SubResource("Placement_ground_20"), SubResource("Placement_ground_21"), SubResource("Placement_ground_22"), SubResource("Placement_ground_23"), SubResource("Placement_ground_24"), SubResource("Placement_ground_25"), SubResource("Placement_ground_26"), SubResource("Placement_ground_27"), SubResource("Placement_ground_28"), SubResource("Placement_ground_29"), SubResource("Placement_ground_30"), SubResource("Placement_ground_31"), SubResource("Placement_ground_32")])
+scatter_regions = Array[ExtResource("3_scatter")]([SubResource("Resource_mnyy3")])

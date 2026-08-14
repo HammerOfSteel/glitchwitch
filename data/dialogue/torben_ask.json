@@ -1,0 +1,30 @@
+{
+  "start": "greet",
+  "nodes": {
+    "greet": {
+      "speaker": "Torben Ask",
+      "text": "...Afternoon.",
+      "condition": { "flag": "talked_to_torben_ask", "equals": true },
+      "next": "chat_repeat",
+      "else": "ask_woods"
+    },
+    "ask_woods": {
+      "speaker": "Torben Ask",
+      "text": "Was just heading back from the treeline. Quiet work, mostly. You've got a moment?",
+      "choices": [
+        { "text": "Sure, tell me about the woods.", "next": "chat", "set_flag": "talked_to_torben_ask" },
+        { "text": "Not now.", "next": null }
+      ]
+    },
+    "chat": {
+      "speaker": "Torben Ask",
+      "text": "Moss is thick this year. Good sign — means the old trees are settled. Axe stays on my belt more than in my hand, these days.",
+      "next": null
+    },
+    "chat_repeat": {
+      "speaker": "Torben Ask",
+      "text": "Still quiet out there. Suits me fine.",
+      "next": null
+    }
+  }
+}

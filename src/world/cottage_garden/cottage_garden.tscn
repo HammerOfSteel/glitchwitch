@@ -1,0 +1,57 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://src/world/cottage_garden/cottage_garden.gd" id="1_cottage"]
+[ext_resource type="PackedScene" path="res://src/player/player.tscn" id="2_player"]
+[ext_resource type="Script" uid="uid://b5dgipviofrwe" path="res://src/world/zone_builder.gd" id="3_builder"]
+[ext_resource type="Resource" path="res://src/world/cottage_garden/cottage_garden.tres" id="4_zone"]
+[ext_resource type="Script" path="res://src/world/time_of_day_rig.gd" id="5_time_of_day"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+sky_top_color = Color(0.53, 0.72, 0.83, 1)
+sky_horizon_color = Color(0.87, 0.85, 0.76, 1)
+ground_bottom_color = Color(0.42, 0.49, 0.4, 1)
+ground_horizon_color = Color(0.85, 0.83, 0.74, 1)
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+ambient_light_color = Color(0.92, 0.9, 0.85, 1)
+ambient_light_energy = 0.6
+tonemap_mode = 3
+fog_enabled = true
+fog_light_color = Color(0.85, 0.85, 0.78, 1)
+fog_density = 0.004
+
+[sub_resource type="BoxShape3D" id="ground_col"]
+size = Vector3(12.2, 0.4, 12.2)
+
+[node name="CottageGarden" type="Node3D"]
+script = ExtResource("1_cottage")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+
+[node name="Fill" type="DirectionalLight3D" parent="."]
+
+[node name="TimeOfDayRig" type="Node" parent="."]
+script = ExtResource("5_time_of_day")
+
+[node name="GroundCollider" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+
+[node name="Shape" type="CollisionShape3D" parent="GroundCollider"]
+shape = SubResource("ground_col")
+
+[node name="ZoneBuilder" type="Node3D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("3_builder")
+zone = ExtResource("4_zone")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 3)

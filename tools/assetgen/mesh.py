@@ -69,6 +69,33 @@ class MeshBuilder:
         for i in range(1, len(points) - 1):
             self.indices.extend((base, base + i, base + i + 1))
 
+    def add_textured_face(self, points, uvs) -> None:
+        """Add a convex face (3+ points, CCW winding) with an explicit
+        per-vertex UV for each point — for faces that sample a real, baked
+        (non-flat) texture region (see palette.texture_uv_rect) instead of
+        one flat palette-cell color."""
+        if len(points) < 3:
+            raise ValueError("face needs at least 3 points")
+        if len(uvs) != len(points):
+            raise ValueError("uvs must match points 1:1")
+        normal = _normalize(_cross(_sub(points[1], points[0]), _sub(points[2], points[0])))
+        base = len(self.positions)
+        for point, uv in zip(points, uvs):
+            self.positions.append(tuple(round(c, ROUND) for c in point))
+            self.normals.append(tuple(round(c, ROUND) for c in normal))
+            self.uvs.append((round(uv[0], 6), round(uv[1], 6)))
+        for i in range(1, len(points) - 1):
+            self.indices.extend((base, base + i, base + i + 1))
+
+    def add_double_face(self, points, ramp: str, shade: int) -> None:
+        """Add a face visible from both sides — a second copy with reversed
+        winding (and thus an opposite, correctly-facing normal) stacked on
+        the same geometry. Needed for single-layer cards (grass blades,
+        flower petals) that must read as solid from any camera angle,
+        without depending on renderer double-sided/backface-cull settings."""
+        self.add_face(points, ramp, shade)
+        self.add_face(list(reversed(points)), ramp, shade)
+
     def merge(self, other: "MeshBuilder", offset=(0.0, 0.0, 0.0), yaw: float = 0.0) -> None:
         base = len(self.positions)
         for position in other.positions:

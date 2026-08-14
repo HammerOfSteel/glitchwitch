@@ -16,6 +16,8 @@ config/icon="res://icon.svg"
 [autoload]
 
 InputBootstrap="*res://src/core/input_bootstrap.gd"
+GameClock="*res://src/core/game_clock.gd"
+DialogueRunner="*res://src/core/dialogue_runner.gd"
 
 [display]
 

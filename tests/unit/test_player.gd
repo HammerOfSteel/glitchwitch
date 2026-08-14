@@ -9,6 +9,13 @@ const PLAYER_SCENE := "res://src/player/player.tscn"
 const MAX_FRAMES := 900
 
 
+func after_test() -> void:
+	DialogueRunner.flags = {}
+	DialogueRunner._graph = null
+	DialogueRunner._current_node_id = ""
+	DialogueRunner._voice_seed = 0
+
+
 func _build_arena(floor_rotation_deg: float = 0.0) -> Node3D:
 	var arena := Node3D.new()
 	var floor_body := StaticBody3D.new()
@@ -160,3 +167,68 @@ func test_avatar_mount_faces_motion() -> void:
 		)
 		. is_true()
 	)
+
+
+func test_dialogue_line_shown_force_hides_interact_prompt_even_if_already_visible() -> void:
+	var player: Player = preload("res://src/player/player.tscn").instantiate()
+	auto_free(player)
+	add_child(player)
+	var prompt := player.get_node("%InteractPrompt") as InteractPrompt
+	var item := Interactable.new()
+	auto_free(item)
+	prompt.on_focus_changed(item)  # simulate focus already held
+	assert_bool(prompt.visible).is_true()
+	DialogueRunner.line_shown.emit("Villager", "Hi.")
+	assert_bool(prompt.visible).is_false()
+
+
+func test_dialogue_choices_shown_force_hides_interact_prompt_with_real_focus() -> void:
+	# Uses the real test_interact.gd-style focus-simulation pattern (not a
+	# faked on_focus_changed() call) so the prompt is genuinely visible via
+	# FocusResolver before we assert force_hide() reacts to choices_shown —
+	# this is the actual path the first demo conversation takes on first
+	# encounter (condition-false -> else -> choices_shown immediately).
+	var arena := Node3D.new()
+	auto_free(arena)
+	var player: Player = preload("res://src/player/player.tscn").instantiate()
+	player.input_enabled = false
+	arena.add_child(player)
+	var item := Interactable.new()
+	item.position = Vector3(0, 1, -1.5)  # in front of player, within reach
+	arena.add_child(item)
+	var runner := scene_runner(arena)
+	await runner.simulate_frames(15)  # let FocusResolver's real evaluate() focus `item`
+	var resolver := player.get_node("%FocusResolver") as FocusResolver
+	assert_object(resolver.focused()).is_same(item)  # sanity-check the real focus state
+	var prompt := player.get_node("%InteractPrompt") as InteractPrompt
+	assert_bool(prompt.visible).is_true()
+	DialogueRunner.choices_shown.emit("Villager", "Nice day?", ["Sure is.", "Not really."])
+	assert_bool(prompt.visible).is_false()
+
+
+func test_dialogue_ended_reshows_prompt_via_current_focus() -> void:
+	var arena := Node3D.new()
+	auto_free(arena)
+	var player: Player = preload("res://src/player/player.tscn").instantiate()
+	player.input_enabled = false
+	arena.add_child(player)
+	var item := Interactable.new()
+	item.position = Vector3(0, 1, -1.5)  # in front of player, within reach
+	arena.add_child(item)
+	var runner := scene_runner(arena)
+	await runner.simulate_frames(15)  # let FocusResolver's real evaluate() focus `item`
+	var resolver := player.get_node("%FocusResolver") as FocusResolver
+	assert_object(resolver.focused()).is_same(item)  # sanity-check the real focus state
+	var prompt := player.get_node("%InteractPrompt") as InteractPrompt
+	prompt.force_hide()
+	DialogueRunner.ended.emit()
+	assert_bool(prompt.visible).is_true()
+
+
+func test_dialogue_ended_reenables_player_input() -> void:
+	var player: Player = preload("res://src/player/player.tscn").instantiate()
+	auto_free(player)
+	add_child(player)
+	player.input_enabled = false
+	DialogueRunner.ended.emit()
+	assert_bool(player.input_enabled).is_true()

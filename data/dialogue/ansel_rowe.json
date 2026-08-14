@@ -1,0 +1,30 @@
+{
+  "start": "greet",
+  "nodes": {
+    "greet": {
+      "speaker": "Ansel Rowe",
+      "text": "Ah, good day! Just Ansel — I carry the post round these parts.",
+      "condition": { "flag": "talked_to_ansel_rowe", "equals": true },
+      "next": "chat_repeat",
+      "else": "ask_route"
+    },
+    "ask_route": {
+      "speaker": "Ansel Rowe",
+      "text": "Got a whole satchel of letters yet to deliver. Mind if I chat a moment while my feet rest?",
+      "choices": [
+        { "text": "Of course.", "next": "chat", "set_flag": "talked_to_ansel_rowe" },
+        { "text": "Some other time.", "next": null }
+      ]
+    },
+    "chat": {
+      "speaker": "Ansel Rowe",
+      "text": "Same route every day for near twenty years now. Boots wear through faster than the badge ever will.",
+      "next": null
+    },
+    "chat_repeat": {
+      "speaker": "Ansel Rowe",
+      "text": "Rain or shine, the post gets where it's going. Mostly.",
+      "next": null
+    }
+  }
+}

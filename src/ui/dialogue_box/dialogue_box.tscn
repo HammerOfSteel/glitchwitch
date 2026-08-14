@@ -1,0 +1,80 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/ui/dialogue_box/dialogue_box.gd" id="1_dialogue_box"]
+
+[node name="DialogueBox" type="Control" unique_id=969336804]
+layout_mode = 3
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -320.0
+offset_top = -196.0
+offset_right = 320.0
+offset_bottom = -36.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("1_dialogue_box")
+
+[node name="Panel" type="Panel" parent="." unique_id=665959887]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel" unique_id=318941644]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="PortraitBg" type="Panel" parent="Panel/HBoxContainer" unique_id=1657090446]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+
+[node name="PortraitLabel" type="Label" parent="Panel/HBoxContainer/PortraitBg" unique_id=452041485]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/HBoxContainer" unique_id=362756403]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SpeakerLabel" type="Label" parent="Panel/HBoxContainer/VBoxContainer" unique_id=474992609]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+
+[node name="TextLabel" type="Label" parent="Panel/HBoxContainer/VBoxContainer" unique_id=2018032630]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 2
+
+[node name="ChoicesBox" type="VBoxContainer" parent="Panel/HBoxContainer/VBoxContainer" unique_id=1909981808]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RevealTimer" type="Timer" parent="." unique_id=1596836941]
+unique_name_in_owner = true
+
+[node name="BlipPlayer" type="AudioStreamPlayer" parent="." unique_id=681084367]
+unique_name_in_owner = true
